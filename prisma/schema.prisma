@@ -1,0 +1,251 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Modelo de Usuário (proprietário do estabelecimento)
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  password      String
+  name          String
+  phone         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  establishment Establishment?
+  subscription  Subscription?
+
+  @@map("users")
+}
+
+// Modelo de Estabelecimento
+model Establishment {
+  id              String    @id @default(uuid())
+  name            String
+  slug            String    @unique
+  description     String?
+  address         String?
+  phone           String?
+  email           String?
+  logo            String?
+  
+  // Horários de funcionamento (JSON com dias da semana)
+  businessHours   Json?
+  
+  // Configurações adicionais
+  timezone        String    @default("America/Sao_Paulo")
+  slotDuration    Int       @default(30) // Duração padrão do slot em minutos
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relacionamentos
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  professionals   Professional[]
+  services        Service[]
+  clients         Client[]
+  appointments    Appointment[]
+
+  @@map("establishments")
+}
+
+// Modelo de Profissional
+model Professional {
+  id              String    @id @default(uuid())
+  name            String
+  email           String?
+  phone           String?
+  avatar          String?
+  bio             String?
+  active          Boolean   @default(true)
+  
+  // Horários de trabalho específicos do profissional (opcional, usa do estabelecimento se não definido)
+  workingHours    Json?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relacionamentos
+  establishmentId String
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  
+  appointments    Appointment[]
+  services        ProfessionalService[]
+
+  @@map("professionals")
+}
+
+// Modelo de Serviço
+model Service {
+  id              String    @id @default(uuid())
+  name            String
+  description     String?
+  duration        Int       // Duração em minutos
+  price           Decimal   @db.Decimal(10, 2)
+  active          Boolean   @default(true)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relacionamentos
+  establishmentId String
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  
+  appointments    Appointment[]
+  professionals   ProfessionalService[]
+
+  @@map("services")
+}
+
+// Tabela de relacionamento entre Profissional e Serviço
+model ProfessionalService {
+  id              String    @id @default(uuid())
+  professionalId  String
+  serviceId       String
+  
+  professional    Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  service         Service      @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([professionalId, serviceId])
+  @@map("professional_services")
+}
+
+// Modelo de Cliente
+model Client {
+  id              String    @id @default(uuid())
+  name            String
+  email           String?
+  phone           String
+  notes           String?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relacionamentos
+  establishmentId String
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  
+  appointments    Appointment[]
+
+  @@unique([phone, establishmentId])
+  @@map("clients")
+}
+
+// Modelo de Agendamento
+model Appointment {
+  id              String            @id @default(uuid())
+  date            DateTime          @db.Date
+  startTime       DateTime          @db.Time()
+  endTime         DateTime          @db.Time()
+  status          AppointmentStatus @default(PENDING)
+  notes           String?
+  
+  // Preço no momento do agendamento (pode diferir do preço atual do serviço)
+  price           Decimal           @db.Decimal(10, 2)
+  
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  // Relacionamentos
+  establishmentId String
+  establishment   Establishment     @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  
+  clientId        String
+  client          Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  professionalId  String
+  professional    Professional      @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  
+  serviceId       String
+  service         Service           @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@index([establishmentId, date])
+  @@index([professionalId, date])
+  @@map("appointments")
+}
+
+// Status do Agendamento
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+// Modelo de Plano de Assinatura
+model Plan {
+  id              String    @id @default(uuid())
+  name            String
+  description     String?
+  price           Decimal   @db.Decimal(10, 2)
+  interval        PlanInterval @default(MONTHLY)
+  
+  // Limites do plano
+  maxProfessionals Int       @default(1)
+  maxServices      Int       @default(10)
+  maxAppointments  Int       @default(100) // Por mês
+  
+  // Features do plano (JSON com lista de features)
+  features        Json?
+  
+  active          Boolean   @default(true)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  subscriptions   Subscription[]
+
+  @@map("plans")
+}
+
+// Intervalo do Plano
+enum PlanInterval {
+  MONTHLY
+  YEARLY
+}
+
+// Modelo de Assinatura
+model Subscription {
+  id                    String             @id @default(uuid())
+  status                SubscriptionStatus @default(INACTIVE)
+  
+  startDate             DateTime?
+  endDate               DateTime?
+  cancelledAt           DateTime?
+  
+  // ID da assinatura no gateway de pagamento (Stripe, Mercado Pago, etc.)
+  gatewaySubscriptionId String?
+  gatewayCustomerId     String?
+  
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  // Relacionamentos
+  userId                String             @unique
+  user                  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  planId                String
+  plan                  Plan               @relation(fields: [planId], references: [id])
+
+  @@map("subscriptions")
+}
+
+// Status da Assinatura
+enum SubscriptionStatus {
+  ACTIVE
+  INACTIVE
+  CANCELLED
+  PAST_DUE
+  TRIALING
+}
