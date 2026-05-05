@@ -1,5 +1,9 @@
 import path from 'node:path'
 import { defineConfig } from 'prisma/config'
+import { config } from 'dotenv'
+
+// Carrega as variáveis do .env
+config()
 
 export default defineConfig({
   earlyAccess: true,
