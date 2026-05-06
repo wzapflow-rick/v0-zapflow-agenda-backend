@@ -14,7 +14,7 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Senha é obrigatória'),
 });
 
-// Working Hours Schema - aceita ambos os formatos
+// Working Hours Schema - aceita ambos os formatos (sem transform para permitir partial)
 const workingHoursDaySchema = z.object({
   isOpen: z.boolean().optional(),
   enabled: z.boolean().optional(),
@@ -24,13 +24,25 @@ const workingHoursDaySchema = z.object({
   end: z.string().optional(),
   open: z.string().optional(),
   close: z.string().optional(),
-}).transform((data) => ({
-  isOpen: data.isOpen ?? data.enabled ?? false,
-  openTime: data.openTime ?? data.start ?? data.open ?? '09:00',
-  closeTime: data.closeTime ?? data.end ?? data.close ?? '18:00',
-}));
+});
 
 const workingHoursSchema = z.record(workingHoursDaySchema).optional();
+
+// Helper para normalizar working hours
+export function normalizeWorkingHours(data: Record<string, any> | undefined) {
+  if (!data) return undefined;
+  const result: Record<string, { isOpen: boolean; openTime: string; closeTime: string }> = {};
+  for (const [day, hours] of Object.entries(data)) {
+    if (hours && typeof hours === 'object') {
+      result[day] = {
+        isOpen: hours.isOpen ?? hours.enabled ?? false,
+        openTime: hours.openTime ?? hours.start ?? hours.open ?? '09:00',
+        closeTime: hours.closeTime ?? hours.end ?? hours.close ?? '18:00',
+      };
+    }
+  }
+  return result;
+}
 
 // Establishment
 export const updateEstablishmentSchema = z.object({
@@ -49,10 +61,7 @@ export const updateEstablishmentSchema = z.object({
   slotDuration: z.number().int().min(5).max(120).optional(),
   workingHours: workingHoursSchema,
   businessHours: workingHoursSchema,
-}).transform((data) => ({
-  ...data,
-  workingHours: data.workingHours ?? data.businessHours,
-}));
+});
 
 // Professional
 export const createProfessionalSchema = z.object({
@@ -64,10 +73,7 @@ export const createProfessionalSchema = z.object({
   bio: z.string().optional(),
   specialties: z.array(z.string()).optional(),
   workingHours: workingHoursSchema,
-}).transform((data) => ({
-  ...data,
-  avatarUrl: data.avatarUrl ?? data.avatar,
-}));
+});
 
 export const updateProfessionalSchema = createProfessionalSchema.partial().extend({
   isActive: z.boolean().optional(),
