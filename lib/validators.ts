@@ -14,6 +14,24 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Senha é obrigatória'),
 });
 
+// Working Hours Schema - aceita ambos os formatos
+const workingHoursDaySchema = z.object({
+  isOpen: z.boolean().optional(),
+  enabled: z.boolean().optional(),
+  openTime: z.string().optional(),
+  closeTime: z.string().optional(),
+  start: z.string().optional(),
+  end: z.string().optional(),
+  open: z.string().optional(),
+  close: z.string().optional(),
+}).transform((data) => ({
+  isOpen: data.isOpen ?? data.enabled ?? false,
+  openTime: data.openTime ?? data.start ?? data.open ?? '09:00',
+  closeTime: data.closeTime ?? data.end ?? data.close ?? '18:00',
+}));
+
+const workingHoursSchema = z.record(workingHoursDaySchema).optional();
+
 // Establishment
 export const updateEstablishmentSchema = z.object({
   name: z.string().min(2).optional(),
@@ -29,12 +47,12 @@ export const updateEstablishmentSchema = z.object({
   coverUrl: z.string().url().optional().nullable(),
   timezone: z.string().optional(),
   slotDuration: z.number().int().min(5).max(120).optional(),
-  workingHours: z.record(z.object({
-    isOpen: z.boolean(),
-    openTime: z.string(),
-    closeTime: z.string(),
-  })).optional(),
-});
+  workingHours: workingHoursSchema,
+  businessHours: workingHoursSchema,
+}).transform((data) => ({
+  ...data,
+  workingHours: data.workingHours ?? data.businessHours,
+}));
 
 // Professional
 export const createProfessionalSchema = z.object({
@@ -42,14 +60,14 @@ export const createProfessionalSchema = z.object({
   email: z.string().email('Email inválido').optional(),
   phone: z.string().optional(),
   avatarUrl: z.string().url().optional(),
+  avatar: z.string().url().optional(),
   bio: z.string().optional(),
   specialties: z.array(z.string()).optional(),
-  workingHours: z.record(z.object({
-    isOpen: z.boolean(),
-    openTime: z.string(),
-    closeTime: z.string(),
-  })).optional(),
-});
+  workingHours: workingHoursSchema,
+}).transform((data) => ({
+  ...data,
+  avatarUrl: data.avatarUrl ?? data.avatar,
+}));
 
 export const updateProfessionalSchema = createProfessionalSchema.partial().extend({
   isActive: z.boolean().optional(),
