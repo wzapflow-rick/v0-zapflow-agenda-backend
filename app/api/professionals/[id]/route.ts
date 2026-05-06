@@ -70,20 +70,51 @@ export async function PUT(
       throw new ForbiddenError();
     }
 
+    // Atualiza dados basicos do profissional
     const updated = await prisma.professional.update({
       where: { id },
       data: {
         name: data.name,
         email: data.email,
         phone: data.phone,
-        avatar: data.avatarUrl,
+        avatar: data.avatarUrl ?? data.avatar,
         bio: data.bio,
         workingHours: data.workingHours,
         active: data.isActive,
       },
     });
 
-    return success(updated);
+    // Atualiza servicos se fornecidos
+    if (data.serviceIds !== undefined) {
+      // Remove todos os servicos atuais
+      await prisma.professionalService.deleteMany({
+        where: { professionalId: id },
+      });
+
+      // Adiciona os novos servicos
+      if (data.serviceIds.length > 0) {
+        await prisma.professionalService.createMany({
+          data: data.serviceIds.map((serviceId) => ({
+            professionalId: id,
+            serviceId,
+          })),
+        });
+      }
+    }
+
+    // Retorna profissional atualizado com servicos
+    const result = await prisma.professional.findUnique({
+      where: { id },
+      include: {
+        services: {
+          include: {
+            service: true,
+          },
+        },
+      },
+    });
+
+    return success(result);
   } catch (error) {
     return handleError(error);
   }

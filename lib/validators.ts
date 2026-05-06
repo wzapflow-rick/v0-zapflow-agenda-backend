@@ -77,6 +77,7 @@ export const createProfessionalSchema = z.object({
 
 export const updateProfessionalSchema = createProfessionalSchema.partial().extend({
   isActive: z.boolean().optional(),
+  serviceIds: z.array(z.string().uuid()).optional(),
 });
 
 // Service
