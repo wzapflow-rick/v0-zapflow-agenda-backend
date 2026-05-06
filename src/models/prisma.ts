@@ -10,6 +10,13 @@ const globalForPrisma = globalThis as unknown as {
 function createPrismaClient() {
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
+    // Configurações de timeout para evitar SocketTimeout
+    connectionTimeoutMillis: 30000, // 30 segundos para conectar
+    idleTimeoutMillis: 30000, // 30 segundos idle
+    max: 10, // máximo de conexões no pool
+    ssl: process.env.DATABASE_URL?.includes('sslmode=require') 
+      ? { rejectUnauthorized: false } 
+      : undefined,
   });
   
   const adapter = new PrismaPg(pool);
