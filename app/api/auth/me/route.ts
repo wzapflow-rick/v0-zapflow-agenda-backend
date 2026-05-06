@@ -3,7 +3,7 @@ import prisma from '@/lib/prisma';
 import { authenticate, isAuthError } from '@/lib/auth';
 import { success, handleError } from '@/lib/api-utils';
 
-// GET /api/auth/me
+// GET /api/auth/me - Retorna dados do usuário autenticado
 export async function GET(request: NextRequest) {
   try {
     const authResult = await authenticate(request);
