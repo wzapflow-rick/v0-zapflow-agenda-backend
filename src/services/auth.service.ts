@@ -147,9 +147,12 @@ export const authService = {
       throw new UnauthorizedError('Usuário não encontrado');
     }
 
-    // Retorna usuário sem a senha
+    // Retorna usuário sem a senha e com establishmentId no nível raiz
     const { password: _, ...userWithoutPassword } = user;
 
-    return userWithoutPassword;
+    return {
+      ...userWithoutPassword,
+      establishmentId: user.establishmentId,
+    };
   },
 };

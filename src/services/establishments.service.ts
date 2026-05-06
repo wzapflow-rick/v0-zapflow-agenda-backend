@@ -3,6 +3,29 @@ import { UpdateEstablishmentInput } from '../utils/validators';
 import { NotFoundError, ForbiddenError } from '../utils/errors';
 
 export const establishmentsService = {
+  // Obter estabelecimento do usuário logado
+  async getMine(userId: string) {
+    const establishment = await prisma.establishment.findUnique({
+      where: { userId },
+      include: {
+        _count: {
+          select: {
+            professionals: true,
+            services: true,
+            clients: true,
+            appointments: true,
+          },
+        },
+      },
+    });
+
+    if (!establishment) {
+      throw new NotFoundError('Estabelecimento');
+    }
+
+    return establishment;
+  },
+
   // Obter detalhes do estabelecimento
   async getById(establishmentId: string, userId: string) {
     const establishment = await prisma.establishment.findUnique({

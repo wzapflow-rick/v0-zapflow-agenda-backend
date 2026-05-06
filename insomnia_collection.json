@@ -1,0 +1,1142 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-05-05T00:00:00.000Z",
+  "__export_source": "insomnia.desktop.app:v2023.5.8",
+  "resources": [
+    {
+      "_id": "wrk_zap_scheduling",
+      "parentId": null,
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "name": "ZAP Scheduling API",
+      "description": "Backend API para sistema de agendamentos",
+      "scope": "collection",
+      "_type": "workspace"
+    },
+    {
+      "_id": "env_base",
+      "parentId": "wrk_zap_scheduling",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:3000/api",
+        "token": ""
+      },
+      "dataPropertyOrder": {
+        "&": ["base_url", "token"]
+      },
+      "color": null,
+      "isPrivate": false,
+      "metaSortKey": 1714867200000,
+      "_type": "environment"
+    },
+    {
+      "_id": "fld_auth",
+      "parentId": "wrk_zap_scheduling",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "name": "1. Auth",
+      "description": "Endpoints de autenticacao",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1714867200000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_register",
+      "parentId": "fld_auth",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/auth/register",
+      "name": "Register",
+      "description": "Registrar novo usuario e estabelecimento",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"joao@email.com\",\n  \"password\": \"123456\",\n  \"name\": \"Joao Silva\",\n  \"phone\": \"11999999999\",\n  \"establishmentName\": \"Barbearia do Joao\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867200001,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "req_login",
+      "parentId": "fld_auth",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/auth/login",
+      "name": "Login",
+      "description": "Login de usuario - copie o token retornado para a variavel de ambiente",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"joao@email.com\",\n  \"password\": \"123456\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867200000,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "req_me",
+      "parentId": "fld_auth",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/auth/me",
+      "name": "Get Me",
+      "description": "Obter dados do usuario logado",
+      "method": "GET",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867199999,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "fld_establishments",
+      "parentId": "wrk_zap_scheduling",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "name": "2. Establishments",
+      "description": "Endpoints de estabelecimentos",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1714867199000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_get_my_establishment",
+      "parentId": "fld_establishments",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/establishments/me",
+      "name": "Get My Establishment",
+      "description": "Obter meu estabelecimento",
+      "method": "GET",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867200001,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "req_update_establishment",
+      "parentId": "fld_establishments",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/establishments/me",
+      "name": "Update My Establishment",
+      "description": "Atualizar meu estabelecimento",
+      "method": "PUT",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Barbearia do Joao - Atualizada\",\n  \"description\": \"A melhor barbearia da cidade\",\n  \"address\": \"Rua das Flores, 123\",\n  \"phone\": \"11988888888\",\n  \"email\": \"contato@barbearia.com\",\n  \"timezone\": \"America/Sao_Paulo\",\n  \"slotDuration\": 30,\n  \"businessHours\": {\n    \"monday\": { \"open\": \"09:00\", \"close\": \"19:00\", \"enabled\": true },\n    \"tuesday\": { \"open\": \"09:00\", \"close\": \"19:00\", \"enabled\": true },\n    \"wednesday\": { \"open\": \"09:00\", \"close\": \"19:00\", \"enabled\": true },\n    \"thursday\": { \"open\": \"09:00\", \"close\": \"19:00\", \"enabled\": true },\n    \"friday\": { \"open\": \"09:00\", \"close\": \"19:00\", \"enabled\": true },\n    \"saturday\": { \"open\": \"09:00\", \"close\": \"14:00\", \"enabled\": true },\n    \"sunday\": { \"open\": \"09:00\", \"close\": \"12:00\", \"enabled\": false }\n  }\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867200000,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "fld_professionals",
+      "parentId": "wrk_zap_scheduling",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "name": "3. Professionals",
+      "description": "Endpoints de profissionais",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1714867198000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_create_professional",
+      "parentId": "fld_professionals",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/professionals",
+      "name": "Create Professional",
+      "description": "Criar novo profissional",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Carlos Barbeiro\",\n  \"email\": \"carlos@barbearia.com\",\n  \"phone\": \"11977777777\",\n  \"avatar\": \"https://example.com/avatar.jpg\",\n  \"specialties\": [\"Corte masculino\", \"Barba\"],\n  \"workingHours\": {\n    \"monday\": { \"start\": \"09:00\", \"end\": \"18:00\", \"enabled\": true },\n    \"tuesday\": { \"start\": \"09:00\", \"end\": \"18:00\", \"enabled\": true },\n    \"wednesday\": { \"start\": \"09:00\", \"end\": \"18:00\", \"enabled\": true },\n    \"thursday\": { \"start\": \"09:00\", \"end\": \"18:00\", \"enabled\": true },\n    \"friday\": { \"start\": \"09:00\", \"end\": \"18:00\", \"enabled\": true },\n    \"saturday\": { \"start\": \"09:00\", \"end\": \"13:00\", \"enabled\": true },\n    \"sunday\": { \"start\": \"09:00\", \"end\": \"13:00\", \"enabled\": false }\n  }\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867200003,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "req_list_professionals",
+      "parentId": "fld_professionals",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/professionals",
+      "name": "List Professionals",
+      "description": "Listar todos os profissionais",
+      "method": "GET",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867200002,
+      "isPrivate": false,
+      "parameters": [
+        {
+          "name": "page",
+          "value": "1",
+          "disabled": true
+        },
+        {
+          "name": "limit",
+          "value": "10",
+          "disabled": true
+        },
+        {
+          "name": "active",
+          "value": "true",
+          "disabled": true
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_professional",
+      "parentId": "fld_professionals",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/professionals/:id",
+      "name": "Get Professional",
+      "description": "Obter profissional por ID",
+      "method": "GET",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867200001,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "req_update_professional",
+      "parentId": "fld_professionals",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/professionals/:id",
+      "name": "Update Professional",
+      "description": "Atualizar profissional",
+      "method": "PUT",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Carlos Barbeiro Senior\",\n  \"specialties\": [\"Corte masculino\", \"Barba\", \"Pigmentacao\"]\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867200000,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "req_delete_professional",
+      "parentId": "fld_professionals",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/professionals/:id",
+      "name": "Delete Professional",
+      "description": "Excluir profissional (soft delete)",
+      "method": "DELETE",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867199999,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "fld_services",
+      "parentId": "wrk_zap_scheduling",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "name": "4. Services",
+      "description": "Endpoints de servicos",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1714867197000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_create_service",
+      "parentId": "fld_services",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/services",
+      "name": "Create Service",
+      "description": "Criar novo servico",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Corte Masculino\",\n  \"description\": \"Corte de cabelo masculino tradicional\",\n  \"duration\": 30,\n  \"price\": 45.00,\n  \"category\": \"Cabelo\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867200003,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "req_list_services",
+      "parentId": "fld_services",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/services",
+      "name": "List Services",
+      "description": "Listar todos os servicos",
+      "method": "GET",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867200002,
+      "isPrivate": false,
+      "parameters": [
+        {
+          "name": "page",
+          "value": "1",
+          "disabled": true
+        },
+        {
+          "name": "limit",
+          "value": "10",
+          "disabled": true
+        },
+        {
+          "name": "category",
+          "value": "Cabelo",
+          "disabled": true
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_service",
+      "parentId": "fld_services",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/services/:id",
+      "name": "Get Service",
+      "description": "Obter servico por ID",
+      "method": "GET",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867200001,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "req_update_service",
+      "parentId": "fld_services",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/services/:id",
+      "name": "Update Service",
+      "description": "Atualizar servico",
+      "method": "PUT",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Corte Masculino Premium\",\n  \"price\": 55.00\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867200000,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "req_delete_service",
+      "parentId": "fld_services",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/services/:id",
+      "name": "Delete Service",
+      "description": "Excluir servico (soft delete)",
+      "method": "DELETE",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867199999,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "req_assign_professionals",
+      "parentId": "fld_services",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/services/:id/professionals",
+      "name": "Assign Professionals to Service",
+      "description": "Vincular profissionais a um servico",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"professionalIds\": [\"PROFESSIONAL_ID_1\", \"PROFESSIONAL_ID_2\"]\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867199998,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "fld_clients",
+      "parentId": "wrk_zap_scheduling",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "name": "5. Clients",
+      "description": "Endpoints de clientes",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1714867196000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_create_client",
+      "parentId": "fld_clients",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/clients",
+      "name": "Create Client",
+      "description": "Criar novo cliente",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Pedro Santos\",\n  \"email\": \"pedro@email.com\",\n  \"phone\": \"11966666666\",\n  \"birthDate\": \"1990-05-15\",\n  \"notes\": \"Cliente VIP\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867200003,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "req_list_clients",
+      "parentId": "fld_clients",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/clients",
+      "name": "List Clients",
+      "description": "Listar todos os clientes",
+      "method": "GET",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867200002,
+      "isPrivate": false,
+      "parameters": [
+        {
+          "name": "page",
+          "value": "1",
+          "disabled": true
+        },
+        {
+          "name": "limit",
+          "value": "10",
+          "disabled": true
+        },
+        {
+          "name": "search",
+          "value": "pedro",
+          "disabled": true
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_client",
+      "parentId": "fld_clients",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/clients/:id",
+      "name": "Get Client",
+      "description": "Obter cliente por ID",
+      "method": "GET",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867200001,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "req_update_client",
+      "parentId": "fld_clients",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/clients/:id",
+      "name": "Update Client",
+      "description": "Atualizar cliente",
+      "method": "PUT",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Pedro Santos Jr\",\n  \"notes\": \"Cliente VIP Gold\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867200000,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "req_delete_client",
+      "parentId": "fld_clients",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/clients/:id",
+      "name": "Delete Client",
+      "description": "Excluir cliente (soft delete)",
+      "method": "DELETE",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867199999,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "req_client_history",
+      "parentId": "fld_clients",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/clients/:id/history",
+      "name": "Get Client History",
+      "description": "Obter historico de agendamentos do cliente",
+      "method": "GET",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867199998,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "fld_appointments",
+      "parentId": "wrk_zap_scheduling",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "name": "6. Appointments",
+      "description": "Endpoints de agendamentos",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1714867195000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_create_appointment",
+      "parentId": "fld_appointments",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/appointments",
+      "name": "Create Appointment",
+      "description": "Criar novo agendamento",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"clientId\": \"CLIENT_ID\",\n  \"professionalId\": \"PROFESSIONAL_ID\",\n  \"serviceId\": \"SERVICE_ID\",\n  \"date\": \"2026-05-10\",\n  \"startTime\": \"10:00\",\n  \"notes\": \"Primeira visita\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867200005,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "req_list_appointments",
+      "parentId": "fld_appointments",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/appointments",
+      "name": "List Appointments",
+      "description": "Listar todos os agendamentos",
+      "method": "GET",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867200004,
+      "isPrivate": false,
+      "parameters": [
+        {
+          "name": "startDate",
+          "value": "2026-05-01",
+          "disabled": true
+        },
+        {
+          "name": "endDate",
+          "value": "2026-05-31",
+          "disabled": true
+        },
+        {
+          "name": "professionalId",
+          "value": "PROFESSIONAL_ID",
+          "disabled": true
+        },
+        {
+          "name": "status",
+          "value": "SCHEDULED",
+          "disabled": true
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_appointment",
+      "parentId": "fld_appointments",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/appointments/:id",
+      "name": "Get Appointment",
+      "description": "Obter agendamento por ID",
+      "method": "GET",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867200003,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "req_update_appointment",
+      "parentId": "fld_appointments",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/appointments/:id",
+      "name": "Update Appointment",
+      "description": "Atualizar agendamento",
+      "method": "PUT",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"date\": \"2026-05-11\",\n  \"startTime\": \"14:00\",\n  \"notes\": \"Reagendado pelo cliente\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867200002,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "req_update_appointment_status",
+      "parentId": "fld_appointments",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/appointments/:id/status",
+      "name": "Update Appointment Status",
+      "description": "Atualizar status do agendamento (SCHEDULED, CONFIRMED, COMPLETED, CANCELLED, NO_SHOW)",
+      "method": "PATCH",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"status\": \"CONFIRMED\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867200001,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "req_cancel_appointment",
+      "parentId": "fld_appointments",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/appointments/:id",
+      "name": "Cancel Appointment",
+      "description": "Cancelar agendamento",
+      "method": "DELETE",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867200000,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "req_available_slots",
+      "parentId": "fld_appointments",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/appointments/available-slots",
+      "name": "Get Available Slots",
+      "description": "Obter horarios disponiveis para agendamento",
+      "method": "GET",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867199999,
+      "isPrivate": false,
+      "parameters": [
+        {
+          "name": "date",
+          "value": "2026-05-10",
+          "disabled": false
+        },
+        {
+          "name": "professionalId",
+          "value": "PROFESSIONAL_ID",
+          "disabled": false
+        },
+        {
+          "name": "serviceId",
+          "value": "SERVICE_ID",
+          "disabled": false
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "fld_subscriptions",
+      "parentId": "wrk_zap_scheduling",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "name": "7. Subscriptions",
+      "description": "Endpoints de assinaturas e planos",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1714867194000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_list_plans",
+      "parentId": "fld_subscriptions",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/subscriptions/plans",
+      "name": "List Plans",
+      "description": "Listar todos os planos disponiveis",
+      "method": "GET",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867200003,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_subscription",
+      "parentId": "fld_subscriptions",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/subscriptions/current",
+      "name": "Get Current Subscription",
+      "description": "Obter assinatura atual do usuario",
+      "method": "GET",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867200002,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "req_create_subscription",
+      "parentId": "fld_subscriptions",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/subscriptions",
+      "name": "Create Subscription",
+      "description": "Criar nova assinatura",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"planId\": \"PLAN_ID\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867200001,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "req_cancel_subscription",
+      "parentId": "fld_subscriptions",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/subscriptions/current",
+      "name": "Cancel Subscription",
+      "description": "Cancelar assinatura atual",
+      "method": "DELETE",
+      "body": {},
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867200000,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "fld_public",
+      "parentId": "wrk_zap_scheduling",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "name": "8. Public (Sem Auth)",
+      "description": "Endpoints publicos para agendamento externo",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1714867193000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_public_establishment",
+      "parentId": "fld_public",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/public/establishments/:slug",
+      "name": "Get Establishment by Slug",
+      "description": "Obter estabelecimento pelo slug (publico)",
+      "method": "GET",
+      "body": {},
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -1714867200004,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "req_public_services",
+      "parentId": "fld_public",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/public/establishments/:slug/services",
+      "name": "Get Public Services",
+      "description": "Listar servicos do estabelecimento (publico)",
+      "method": "GET",
+      "body": {},
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -1714867200003,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "req_public_professionals",
+      "parentId": "fld_public",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/public/establishments/:slug/professionals",
+      "name": "Get Public Professionals",
+      "description": "Listar profissionais do estabelecimento (publico)",
+      "method": "GET",
+      "body": {},
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -1714867200002,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    },
+    {
+      "_id": "req_public_slots",
+      "parentId": "fld_public",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/public/establishments/:slug/available-slots",
+      "name": "Get Public Available Slots",
+      "description": "Obter horarios disponiveis (publico)",
+      "method": "GET",
+      "body": {},
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -1714867200001,
+      "isPrivate": false,
+      "parameters": [
+        {
+          "name": "date",
+          "value": "2026-05-10",
+          "disabled": false
+        },
+        {
+          "name": "professionalId",
+          "value": "PROFESSIONAL_ID",
+          "disabled": false
+        },
+        {
+          "name": "serviceId",
+          "value": "SERVICE_ID",
+          "disabled": false
+        }
+      ],
+      "_type": "request"
+    },
+    {
+      "_id": "req_public_booking",
+      "parentId": "fld_public",
+      "modified": 1714867200000,
+      "created": 1714867200000,
+      "url": "{{ _.base_url }}/public/establishments/:slug/book",
+      "name": "Create Public Booking",
+      "description": "Criar agendamento publico (cliente externo)",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"clientName\": \"Maria Silva\",\n  \"clientEmail\": \"maria@email.com\",\n  \"clientPhone\": \"11955555555\",\n  \"professionalId\": \"PROFESSIONAL_ID\",\n  \"serviceId\": \"SERVICE_ID\",\n  \"date\": \"2026-05-10\",\n  \"startTime\": \"14:00\",\n  \"notes\": \"Primeira visita\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1714867200000,
+      "isPrivate": false,
+      "parameters": [],
+      "_type": "request"
+    }
+  ]
+}
