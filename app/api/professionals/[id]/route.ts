@@ -70,7 +70,6 @@ export async function PUT(
       throw new ForbiddenError();
     }
 
-    // Atualiza dados basicos do profissional
     const updated = await prisma.professional.update({
       where: { id },
       data: {
@@ -82,29 +81,6 @@ export async function PUT(
         workingHours: data.workingHours,
         active: data.isActive,
       },
-    });
-
-    // Atualiza servicos se fornecidos
-    if (data.serviceIds !== undefined) {
-      // Remove todos os servicos atuais
-      await prisma.professionalService.deleteMany({
-        where: { professionalId: id },
-      });
-
-      // Adiciona os novos servicos
-      if (data.serviceIds.length > 0) {
-        await prisma.professionalService.createMany({
-          data: data.serviceIds.map((serviceId) => ({
-            professionalId: id,
-            serviceId,
-          })),
-        });
-      }
-    }
-
-    // Retorna profissional atualizado com servicos
-    const result = await prisma.professional.findUnique({
-      where: { id },
       include: {
         services: {
           include: {
@@ -114,7 +90,7 @@ export async function PUT(
       },
     });
 
-    return success(result);
+    return success(updated);
   } catch (error) {
     return handleError(error);
   }
