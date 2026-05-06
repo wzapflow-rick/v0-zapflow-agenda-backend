@@ -61,11 +61,10 @@ export async function authenticate(request: NextRequest): Promise<AuthUser | Nex
 
   const user = await prisma.user.findUnique({
     where: { id: payload.userId },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      establishmentId: true,
+    include: {
+      establishment: {
+        select: { id: true },
+      },
     },
   });
 
@@ -76,7 +75,12 @@ export async function authenticate(request: NextRequest): Promise<AuthUser | Nex
     );
   }
 
-  return user;
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    establishmentId: user.establishment?.id || null,
+  };
 }
 
 // Helper para verificar se é erro de autenticação
