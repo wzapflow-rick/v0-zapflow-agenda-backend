@@ -104,6 +104,53 @@ export async function POST(
   }
 }
 
+// PUT /api/establishments/[id]/automatic-messages/whatsapp - Atualizar status da conexão
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const authResult = await authenticate(request);
+    if (isAuthError(authResult)) {
+      return authResult.toResponse();
+    }
+
+    const { id } = await params;
+
+    if (authResult.establishmentId !== id) {
+      throw new ForbiddenError('Sem permissão para acessar este estabelecimento');
+    }
+
+    const body = await request.json();
+    const { connected, phone, instanceName } = body;
+
+    // Atualiza as configurações no banco
+    const settings = await prisma.automaticMessageSettings.upsert({
+      where: { establishmentId: id },
+      update: {
+        whatsappConnected: connected ?? false,
+        whatsappPhone: phone ?? null,
+        whatsappInstanceName: instanceName ?? undefined,
+      },
+      create: {
+        establishmentId: id,
+        whatsappConnected: connected ?? false,
+        whatsappPhone: phone ?? null,
+        whatsappInstanceName: instanceName ?? null,
+        activeMessages: [],
+      },
+    });
+
+    return success({
+      connected: settings.whatsappConnected,
+      phone: settings.whatsappPhone,
+      instanceName: settings.whatsappInstanceName,
+    });
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
 // DELETE /api/establishments/[id]/automatic-messages/whatsapp - Desconectar
 export async function DELETE(
   request: NextRequest,
