@@ -3,6 +3,111 @@ import prisma from './prisma';
 const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL;
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY;
 
+// Formata o número de telefone para o formato da Evolution API (5511999999999)
+function formatPhoneNumber(phone: string): string {
+  // Remove tudo que não é número
+  const numbers = phone.replace(/\D/g, '');
+  
+  // Se já começa com 55, retorna como está
+  if (numbers.startsWith('55')) {
+    return numbers;
+  }
+  
+  // Adiciona o código do país
+  return `55${numbers}`;
+}
+
+// Classe para interagir com a Evolution API
+export class EvolutionAPI {
+  private baseUrl: string;
+  private apiKey: string;
+
+  constructor() {
+    this.baseUrl = EVOLUTION_API_URL || '';
+    this.apiKey = EVOLUTION_API_KEY || '';
+  }
+
+  private async request(endpoint: string, options: RequestInit = {}) {
+    if (!this.baseUrl || !this.apiKey) {
+      throw new Error('Evolution API não configurada. Configure EVOLUTION_API_URL e EVOLUTION_API_KEY.');
+    }
+
+    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': this.apiKey,
+        ...options.headers,
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Erro desconhecido' }));
+      throw new Error(error.message || `Erro ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  // Cria uma nova instância
+  async createInstance(instanceName: string) {
+    return this.request('/instance/create', {
+      method: 'POST',
+      body: JSON.stringify({
+        instanceName,
+        qrcode: true,
+        integration: 'WHATSAPP-BAILEYS',
+      }),
+    });
+  }
+
+  // Obtém o QR Code para conexão
+  async getQRCode(instanceName: string) {
+    return this.request(`/instance/connect/${instanceName}`, {
+      method: 'GET',
+    });
+  }
+
+  // Verifica o status da conexão
+  async getConnectionStatus(instanceName: string) {
+    return this.request(`/instance/connectionState/${instanceName}`, {
+      method: 'GET',
+    });
+  }
+
+  // Desconecta e remove a instância
+  async deleteInstance(instanceName: string) {
+    return this.request(`/instance/delete/${instanceName}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Faz logout da instância
+  async logout(instanceName: string) {
+    return this.request(`/instance/logout/${instanceName}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Obtém informações da instância
+  async fetchInstance(instanceName: string) {
+    return this.request(`/instance/fetchInstances?instanceName=${instanceName}`, {
+      method: 'GET',
+    });
+  }
+
+  // Envia mensagem de texto
+  async sendText(instanceName: string, phone: string, text: string) {
+    return this.request(`/message/sendText/${instanceName}`, {
+      method: 'POST',
+      body: JSON.stringify({
+        number: formatPhoneNumber(phone),
+        text,
+      }),
+    });
+  }
+}
+
 // Tipos de mensagens disponíveis
 export type MessageType = 
   | 'confirmation'
@@ -112,20 +217,6 @@ Quer confirmar? Responda SIM para garantir.`,
 
 Agende agora: {bookingUrl}`,
 };
-
-// Formata o número de telefone para o formato da Evolution API (5511999999999)
-function formatPhoneNumber(phone: string): string {
-  // Remove tudo que não é número
-  const numbers = phone.replace(/\D/g, '');
-  
-  // Se já começa com 55, retorna como está
-  if (numbers.startsWith('55')) {
-    return numbers;
-  }
-  
-  // Adiciona o código do país
-  return `55${numbers}`;
-}
 
 // Formata a data para exibição
 function formatDate(date: Date): string {
