@@ -106,7 +106,32 @@ export class EvolutionAPI {
       }),
     });
   }
+
+  // Obtém status da instância (conectado, QR code, etc)
+  async getInstanceStatus(instanceName: string): Promise<{ connected: boolean; qrCode?: string }> {
+    try {
+      const status = await this.getConnectionStatus(instanceName);
+      
+      if (status?.state === 'open') {
+        return { connected: true };
+      }
+
+      // Se não está conectado, tenta pegar o QR code
+      try {
+        const qrData = await this.getQRCode(instanceName);
+        return { connected: false, qrCode: qrData?.base64 || qrData?.qrcode };
+      } catch {
+        return { connected: false };
+      }
+    } catch (error) {
+      console.error('[EvolutionAPI] Erro ao obter status:', error);
+      return { connected: false };
+    }
+  }
 }
+
+// Instância singleton para uso nos endpoints
+export const evolutionApi = new EvolutionAPI();
 
 // Tipos de mensagens disponíveis
 export type MessageType = 
