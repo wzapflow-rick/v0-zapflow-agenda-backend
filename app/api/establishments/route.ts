@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { authenticate, isAuthError } from '@/lib/auth';
 import { success, handleError, NotFoundError } from '@/lib/api-utils';
-import { updateEstablishmentSchema } from '@/lib/validators';
+import { updateEstablishmentSchema, normalizeWorkingHours } from '@/lib/validators';
 
 // GET /api/establishments - Obter estabelecimento do usuário logado
 export async function GET(request: NextRequest) {
@@ -62,6 +62,10 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    // Normaliza os horários de funcionamento (aceita businessHours ou workingHours)
+    const rawBusinessHours = data.businessHours ?? data.workingHours;
+    const normalizedBusinessHours = normalizeWorkingHours(rawBusinessHours);
+
     // Atualiza estabelecimento
     const updated = await prisma.establishment.update({
       where: { id: establishment.id },
@@ -75,7 +79,7 @@ export async function PUT(request: NextRequest) {
         logo: data.logoUrl,
         timezone: data.timezone,
         slotDuration: data.slotDuration,
-        businessHours: data.workingHours,
+        businessHours: normalizedBusinessHours,
       },
     });
 
