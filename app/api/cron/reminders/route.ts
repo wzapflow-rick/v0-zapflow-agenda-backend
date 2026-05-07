@@ -3,24 +3,30 @@ import prisma from '@/lib/prisma';
 import { success, handleError } from '@/lib/api-utils';
 import { sendAutomaticMessage } from '@/lib/whatsapp';
 
-// Verifica o header de autorização do cron (Vercel Cron ou chave personalizada)
+// Verifica o header de autorização do cron (Vercel Cron, n8n ou chave personalizada)
 function verifyCronAuth(request: NextRequest): boolean {
-  const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
 
-  // Se CRON_SECRET estiver definido, verifica
-  if (cronSecret) {
-    return authHeader === `Bearer ${cronSecret}`;
+  // Se CRON_SECRET não estiver definido, permite qualquer chamada
+  if (!cronSecret) {
+    return true;
+  }
+
+  // Verifica header Authorization: Bearer <secret>
+  const authHeader = request.headers.get('authorization');
+  if (authHeader === `Bearer ${cronSecret}`) {
+    return true;
+  }
+
+  // Verifica header x-cron-secret (para n8n)
+  const xCronSecret = request.headers.get('x-cron-secret');
+  if (xCronSecret === cronSecret) {
+    return true;
   }
 
   // Verifica se é uma chamada do Vercel Cron
   const vercelCronHeader = request.headers.get('x-vercel-cron');
   if (vercelCronHeader) {
-    return true;
-  }
-
-  // Em ambiente de desenvolvimento, permite sem autenticação
-  if (process.env.NODE_ENV === 'development') {
     return true;
   }
 
