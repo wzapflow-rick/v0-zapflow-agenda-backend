@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { success, handleError, NotFoundError, ApiError } from '@/lib/api-utils';
 import { publicBookingSchema } from '@/lib/validators';
+import { sendAutomaticMessage } from '@/lib/whatsapp';
 
 // POST /api/public/[slug]/book - Criar agendamento público
 export async function POST(
@@ -126,6 +127,30 @@ export async function POST(
         },
       },
     });
+
+    // Envia mensagem de confirmação (async, não bloqueia a resposta)
+    sendAutomaticMessage('confirmation', {
+      id: appointment.id,
+      date: appointment.date,
+      startTime: data.startTime,
+      client: {
+        id: client.id,
+        name: client.name,
+        phone: client.phone,
+      },
+      professional: {
+        name: appointment.professional.name,
+      },
+      service: {
+        name: appointment.service.name,
+      },
+      establishment: {
+        id: establishment.id,
+        name: establishment.name,
+        slug: establishment.slug,
+        address: establishment.address,
+      },
+    }).catch(err => console.error('[WhatsApp] Erro ao enviar confirmação:', err));
 
     return success({
       appointment: {

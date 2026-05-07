@@ -51,10 +51,12 @@ model Establishment {
   userId          String    @unique
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  professionals   Professional[]
-  services        Service[]
-  clients         Client[]
-  appointments    Appointment[]
+  professionals             Professional[]
+  services                  Service[]
+  clients                   Client[]
+  appointments              Appointment[]
+  automaticMessageSettings  AutomaticMessageSettings?
+  messageLogs               MessageLog[]
 
   @@map("establishments")
 }
@@ -136,6 +138,7 @@ model Client {
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
   
   appointments    Appointment[]
+  messageLogs     MessageLog[]
 
   @@unique([phone, establishmentId])
   @@map("clients")
@@ -168,6 +171,8 @@ model Appointment {
   
   serviceId       String
   service         Service           @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  
+  messageLogs     MessageLog[]
 
   @@index([establishmentId, date])
   @@index([professionalId, date])
@@ -248,4 +253,58 @@ enum SubscriptionStatus {
   CANCELLED
   PAST_DUE
   TRIALING
+}
+
+// Configurações de Mensagens Automáticas
+model AutomaticMessageSettings {
+  id                    String    @id @default(uuid())
+  activeMessages        String[]  @default([]) // Array de IDs das mensagens ativas
+  whatsappInstanceName  String?   // Nome da instância na Evolution API
+  whatsappConnected     Boolean   @default(false)
+  whatsappPhone         String?   // Número conectado
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  // Relacionamentos
+  establishmentId       String    @unique
+  establishment         Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
+  @@map("automatic_message_settings")
+}
+
+// Log de Mensagens Enviadas
+model MessageLog {
+  id              String    @id @default(uuid())
+  messageType     String    // confirmation, reminder_24h, etc.
+  recipientPhone  String
+  recipientName   String
+  content         String    @db.Text
+  status          MessageStatus @default(PENDING)
+  errorMessage    String?
+  
+  sentAt          DateTime?
+  createdAt       DateTime  @default(now())
+
+  // Relacionamentos
+  establishmentId String
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  
+  appointmentId   String?
+  appointment     Appointment?  @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  
+  clientId        String?
+  client          Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([establishmentId, createdAt])
+  @@index([messageType])
+  @@map("message_logs")
+}
+
+// Status da Mensagem
+enum MessageStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
 }
