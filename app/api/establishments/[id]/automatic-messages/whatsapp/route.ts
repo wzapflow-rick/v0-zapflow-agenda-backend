@@ -75,7 +75,7 @@ export async function POST(
       throw new NotFoundError('Estabelecimento não encontrado');
     }
 
-    const instanceName = `zapflow_${establishment.slug}`;
+    const instanceName = `ZapFlow-Agenda_${establishment.slug}`;
 
     // Cria instância na Evolution API
     const result = await evolutionApi.createInstance(instanceName);

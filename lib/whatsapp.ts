@@ -340,19 +340,26 @@ async function canSendMessage(
   establishmentId: string,
   messageType: MessageType
 ): Promise<{ canSend: boolean; settings?: { whatsappInstanceName: string } }> {
+  console.log(`[v0] canSendMessage - buscando settings para establishmentId: ${establishmentId}`);
+  
   const settings = await prisma.automaticMessageSettings.findUnique({
     where: { establishmentId },
   });
 
+  console.log(`[v0] canSendMessage - settings encontrado:`, settings);
+
   if (!settings) {
+    console.log(`[v0] canSendMessage - settings não encontrado`);
     return { canSend: false };
   }
 
   if (!settings.whatsappConnected || !settings.whatsappInstanceName) {
+    console.log(`[v0] canSendMessage - WhatsApp não conectado ou sem instância`);
     return { canSend: false };
   }
 
   if (!settings.activeMessages.includes(messageType)) {
+    console.log(`[v0] canSendMessage - mensagem ${messageType} não está ativa. Ativas: ${settings.activeMessages.join(', ')}`);
     return { canSend: false };
   }
 
@@ -403,7 +410,10 @@ export async function sendAutomaticMessage(
   appointment: AppointmentData,
   extraVariables?: Partial<MessageVariables>
 ): Promise<{ success: boolean; error?: string }> {
+  console.log(`[v0] sendAutomaticMessage chamada - tipo: ${messageType}, estabelecimento: ${appointment.establishment.id}`);
+  
   const { canSend, settings } = await canSendMessage(appointment.establishment.id, messageType);
+  console.log(`[v0] canSendMessage resultado - canSend: ${canSend}, settings:`, settings);
 
   if (!canSend || !settings) {
     console.log(`[WhatsApp] Mensagem ${messageType} não será enviada - não ativa ou WhatsApp desconectado`);
@@ -430,11 +440,15 @@ export async function sendAutomaticMessage(
 
   const message = replaceVariables(template, variables);
 
+  console.log(`[v0] Enviando mensagem para ${appointment.client.phone} via instância ${settings.whatsappInstanceName}`);
+  
   const result = await sendToEvolutionAPI(
     settings.whatsappInstanceName,
     appointment.client.phone,
     message
   );
+  
+  console.log(`[v0] Resultado do envio:`, result);
 
   // Registra no log
   await logMessage({
