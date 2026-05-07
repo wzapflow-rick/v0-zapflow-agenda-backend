@@ -62,9 +62,9 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    // Normaliza os horários de funcionamento (aceita businessHours ou workingHours)
-    const rawBusinessHours = data.businessHours ?? data.workingHours;
-    const normalizedBusinessHours = normalizeWorkingHours(rawBusinessHours);
+    // Normaliza businessHours - aceita tanto workingHours quanto businessHours
+    const rawHours = data.businessHours || data.workingHours;
+    const normalizedHours = normalizeWorkingHours(rawHours);
 
     // Atualiza estabelecimento
     const updated = await prisma.establishment.update({
@@ -79,7 +79,7 @@ export async function PUT(request: NextRequest) {
         logo: data.logoUrl,
         timezone: data.timezone,
         slotDuration: data.slotDuration,
-        businessHours: normalizedBusinessHours,
+        businessHours: normalizedHours,
       },
     });
 

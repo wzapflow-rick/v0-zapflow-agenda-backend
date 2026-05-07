@@ -3,7 +3,6 @@ import prisma from '@/lib/prisma';
 import { authenticate, isAuthError } from '@/lib/auth';
 import { success, handleError, NotFoundError, ApiError } from '@/lib/api-utils';
 import { createAppointmentSchema } from '@/lib/validators';
-import { sendAutomaticMessage } from '@/lib/whatsapp';
 
 // GET /api/appointments - Listar agendamentos
 export async function GET(request: NextRequest) {
@@ -161,27 +160,8 @@ export async function POST(request: NextRequest) {
         client: true,
         professional: true,
         service: true,
-        establishment: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            address: true,
-          },
-        },
       },
     });
-
-    // Envia mensagem de confirmação (async, não bloqueia a resposta)
-    sendAutomaticMessage('confirmation', {
-      id: appointment.id,
-      date: appointment.date,
-      startTime: data.startTime,
-      client: appointment.client,
-      professional: appointment.professional,
-      service: appointment.service,
-      establishment: appointment.establishment,
-    }).catch(err => console.error('[WhatsApp] Erro ao enviar confirmação:', err));
 
     return success(appointment, 201);
   } catch (error) {

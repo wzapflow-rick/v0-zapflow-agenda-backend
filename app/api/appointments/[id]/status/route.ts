@@ -2,9 +2,8 @@ import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { authenticate, isAuthError } from '@/lib/auth';
 import { success, handleError } from '@/lib/api-utils';
-import { NotFoundError, ForbiddenError } from '@/lib/api-utils';
+import { NotFoundError, ForbiddenError, ValidationError } from '@/lib/api-utils';
 import { z } from 'zod';
-import { sendAutomaticMessage, MessageType } from '@/lib/whatsapp';
 
 const updateStatusSchema = z.object({
   status: z.enum(['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED', 'NO_SHOW']),
@@ -45,40 +44,8 @@ export async function PUT(
         client: true,
         professional: true,
         service: true,
-        establishment: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            address: true,
-          },
-        },
       },
     });
-
-    // Envia mensagem automática baseada no novo status
-    const statusMessageMap: Record<string, MessageType | null> = {
-      'COMPLETED': 'thank_you',
-      'CANCELLED': 'cancellation',
-      'NO_SHOW': 'no_show',
-    };
-
-    const messageType = statusMessageMap[status];
-    if (messageType) {
-      const startTimeStr = updated.startTime instanceof Date
-        ? updated.startTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-        : String(updated.startTime);
-
-      sendAutomaticMessage(messageType, {
-        id: updated.id,
-        date: updated.date,
-        startTime: startTimeStr,
-        client: updated.client,
-        professional: updated.professional,
-        service: updated.service,
-        establishment: updated.establishment,
-      }).catch(err => console.error(`[WhatsApp] Erro ao enviar ${messageType}:`, err));
-    }
 
     return success(updated);
   } catch (error) {
