@@ -3,6 +3,96 @@ import prisma from './prisma';
 const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL;
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY;
 
+// Evolution API client
+export const evolutionApi = {
+  // Obter status da instância
+  async getInstanceStatus(instanceName: string): Promise<{ connected: boolean; qrCode?: string }> {
+    if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
+      return { connected: false };
+    }
+
+    try {
+      const response = await fetch(`${EVOLUTION_API_URL}/instance/connectionState/${instanceName}`, {
+        method: 'GET',
+        headers: {
+          'apikey': EVOLUTION_API_KEY,
+        },
+      });
+
+      if (!response.ok) {
+        return { connected: false };
+      }
+
+      const data = await response.json();
+      return {
+        connected: data.state === 'open',
+        qrCode: data.qrcode?.base64,
+      };
+    } catch (error) {
+      console.error('[Evolution API] Erro ao obter status:', error);
+      return { connected: false };
+    }
+  },
+
+  // Criar nova instância
+  async createInstance(instanceName: string): Promise<{ success: boolean; qrCode?: string }> {
+    if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
+      return { success: false };
+    }
+
+    try {
+      const response = await fetch(`${EVOLUTION_API_URL}/instance/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': EVOLUTION_API_KEY,
+        },
+        body: JSON.stringify({
+          instanceName,
+          qrcode: true,
+          integration: 'WHATSAPP-BAILEYS',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('[Evolution API] Erro ao criar instância:', errorData);
+        return { success: false };
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        qrCode: data.qrcode?.base64,
+      };
+    } catch (error) {
+      console.error('[Evolution API] Erro ao criar instância:', error);
+      return { success: false };
+    }
+  },
+
+  // Deletar instância
+  async deleteInstance(instanceName: string): Promise<{ success: boolean }> {
+    if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
+      return { success: false };
+    }
+
+    try {
+      const response = await fetch(`${EVOLUTION_API_URL}/instance/delete/${instanceName}`, {
+        method: 'DELETE',
+        headers: {
+          'apikey': EVOLUTION_API_KEY,
+        },
+      });
+
+      return { success: response.ok };
+    } catch (error) {
+      console.error('[Evolution API] Erro ao deletar instância:', error);
+      return { success: false };
+    }
+  },
+};
+
 // Tipos de mensagens disponíveis
 export type MessageType = 
   | 'confirmation'
