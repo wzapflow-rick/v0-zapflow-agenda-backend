@@ -137,20 +137,35 @@ export async function POST(request: NextRequest) {
       throw new NotFoundError('Estabelecimento');
     }
 
-    const body = await request.json();
-    const { connected, phone } = body;
+    // Busca o estabelecimento para gerar o instanceName
+    const establishment = await prisma.establishment.findUnique({
+      where: { id: authResult.establishmentId },
+      select: { slug: true },
+    });
 
-    // Atualiza o status de conexão
+    if (!establishment) {
+      throw new NotFoundError('Estabelecimento');
+    }
+
+    const body = await request.json();
+    const { connected, phone, instanceName } = body;
+
+    // Gera instanceName se nao foi fornecido
+    const finalInstanceName = instanceName || `ZapFlow-Agenda_${establishment.slug}`;
+
+    // Atualiza o status de conexão E o instanceName
     const settings = await prisma.automaticMessageSettings.upsert({
       where: { establishmentId: authResult.establishmentId },
       update: {
         whatsappConnected: connected,
         whatsappPhone: phone || null,
+        whatsappInstanceName: finalInstanceName,
       },
       create: {
         establishmentId: authResult.establishmentId,
         whatsappConnected: connected,
         whatsappPhone: phone || null,
+        whatsappInstanceName: finalInstanceName,
         activeMessages: [],
       },
     });
@@ -158,6 +173,7 @@ export async function POST(request: NextRequest) {
     return success({
       connected: settings.whatsappConnected,
       phone: settings.whatsappPhone,
+      instanceName: settings.whatsappInstanceName,
     });
   } catch (error) {
     return handleError(error);
