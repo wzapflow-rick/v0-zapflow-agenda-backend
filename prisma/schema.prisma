@@ -22,8 +22,25 @@ model User {
 
   establishment Establishment?
   subscription  Subscription?
+  passwordResets PasswordReset[]
 
   @@map("users")
+}
+
+// Modelo de Token de Recuperacao de Senha
+model PasswordReset {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@map("password_resets")
 }
 
 // Modelo de Estabelecimento
