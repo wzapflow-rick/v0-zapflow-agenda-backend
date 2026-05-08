@@ -1,0 +1,380 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2024-01-01T00:00:00.000Z",
+  "__export_source": "insomnia.desktop.app:v2023.5.8",
+  "resources": [
+    {
+      "_id": "wrk_automatic_messages",
+      "parentId": null,
+      "modified": 1704067200000,
+      "created": 1704067200000,
+      "name": "ZAP Scheduling - Automatic Messages",
+      "description": "Rotas de mensagens automaticas",
+      "scope": "collection",
+      "_type": "workspace"
+    },
+    {
+      "_id": "env_base",
+      "parentId": "wrk_automatic_messages",
+      "modified": 1704067200000,
+      "created": 1704067200000,
+      "name": "Base Environment",
+      "data": {
+        "base_url": "https://v0-zapflow-backend.vercel.app/api",
+        "token": "SEU_TOKEN_JWT_AQUI"
+      },
+      "dataPropertyOrder": {
+        "&": ["base_url", "token"]
+      },
+      "color": null,
+      "isPrivate": false,
+      "metaSortKey": 1704067200000,
+      "_type": "environment"
+    },
+    {
+      "_id": "fld_automatic_messages",
+      "parentId": "wrk_automatic_messages",
+      "modified": 1704067200000,
+      "created": 1704067200000,
+      "name": "Automatic Messages",
+      "description": "Configuracoes de mensagens automaticas",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1704067200000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_get_settings",
+      "parentId": "fld_automatic_messages",
+      "modified": 1704067200000,
+      "created": 1704067200000,
+      "url": "{{ _.base_url }}/automatic-messages",
+      "name": "Get Settings",
+      "description": "Obter configuracoes de mensagens automaticas",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}",
+          "id": "pair_auth_1"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1704067200001,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_update_settings",
+      "parentId": "fld_automatic_messages",
+      "modified": 1704067200000,
+      "created": 1704067200000,
+      "url": "{{ _.base_url }}/automatic-messages",
+      "name": "Update Active Messages",
+      "description": "Atualizar quais mensagens estao ativas",
+      "method": "PUT",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"activeMessages\": [\n    \"confirmation\",\n    \"reminder_24h\",\n    \"reminder_1h\",\n    \"thank_you\",\n    \"cancellation\"\n  ]\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}",
+          "id": "pair_auth_2"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json",
+          "id": "pair_content_2"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1704067200002,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "fld_whatsapp",
+      "parentId": "wrk_automatic_messages",
+      "modified": 1704067200000,
+      "created": 1704067200000,
+      "name": "WhatsApp Connection",
+      "description": "Gerenciar conexao WhatsApp",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1704067200010,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_whatsapp_status",
+      "parentId": "fld_whatsapp",
+      "modified": 1704067200000,
+      "created": 1704067200000,
+      "url": "{{ _.base_url }}/automatic-messages/whatsapp",
+      "name": "Get WhatsApp Status",
+      "description": "Obter status da conexao WhatsApp (retorna QR Code se desconectado)",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}",
+          "id": "pair_auth_3"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1704067200011,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_whatsapp_connect",
+      "parentId": "fld_whatsapp",
+      "modified": 1704067200000,
+      "created": 1704067200000,
+      "url": "{{ _.base_url }}/automatic-messages/whatsapp",
+      "name": "Update WhatsApp Connection",
+      "description": "Atualizar status da conexao (webhook ou manual)",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"connected\": true,\n  \"phone\": \"5511999999999\",\n  \"instanceName\": \"ZapFlow-Agenda_lagbarber1\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}",
+          "id": "pair_auth_4"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json",
+          "id": "pair_content_4"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1704067200012,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_whatsapp_disconnect",
+      "parentId": "fld_whatsapp",
+      "modified": 1704067200000,
+      "created": 1704067200000,
+      "url": "{{ _.base_url }}/automatic-messages/whatsapp",
+      "name": "Disconnect WhatsApp",
+      "description": "Desconectar WhatsApp",
+      "method": "DELETE",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}",
+          "id": "pair_auth_5"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1704067200013,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "fld_logs",
+      "parentId": "wrk_automatic_messages",
+      "modified": 1704067200000,
+      "created": 1704067200000,
+      "name": "Message Logs",
+      "description": "Historico de mensagens enviadas",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1704067200020,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_logs_list",
+      "parentId": "fld_logs",
+      "modified": 1704067200000,
+      "created": 1704067200000,
+      "url": "{{ _.base_url }}/automatic-messages/logs",
+      "name": "List Message Logs",
+      "description": "Listar historico de mensagens enviadas",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "name": "page",
+          "value": "1",
+          "id": "pair_page",
+          "disabled": true
+        },
+        {
+          "name": "limit",
+          "value": "20",
+          "id": "pair_limit",
+          "disabled": true
+        },
+        {
+          "name": "messageType",
+          "value": "confirmation",
+          "id": "pair_type",
+          "disabled": true
+        },
+        {
+          "name": "status",
+          "value": "SENT",
+          "id": "pair_status",
+          "disabled": true
+        },
+        {
+          "name": "startDate",
+          "value": "2024-01-01",
+          "id": "pair_start",
+          "disabled": true
+        },
+        {
+          "name": "endDate",
+          "value": "2024-12-31",
+          "id": "pair_end",
+          "disabled": true
+        }
+      ],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}",
+          "id": "pair_auth_6"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1704067200021,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "fld_cron",
+      "parentId": "wrk_automatic_messages",
+      "modified": 1704067200000,
+      "created": 1704067200000,
+      "name": "Cron Jobs (para n8n)",
+      "description": "Endpoints para serem chamados pelo n8n",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1704067200030,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_cron_reminders",
+      "parentId": "fld_cron",
+      "modified": 1704067200000,
+      "created": 1704067200000,
+      "url": "{{ _.base_url }}/cron/reminders",
+      "name": "Cron - Send Reminders",
+      "description": "Enviar lembretes (24h e 1h antes)",
+      "method": "POST",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -1704067200031,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_cron_birthdays",
+      "parentId": "fld_cron",
+      "modified": 1704067200000,
+      "created": 1704067200000,
+      "url": "{{ _.base_url }}/cron/birthdays",
+      "name": "Cron - Send Birthday Messages",
+      "description": "Enviar mensagens de aniversario",
+      "method": "POST",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -1704067200032,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_cron_reactivation",
+      "parentId": "fld_cron",
+      "modified": 1704067200000,
+      "created": 1704067200000,
+      "url": "{{ _.base_url }}/cron/reactivation",
+      "name": "Cron - Send Reactivation Messages",
+      "description": "Enviar mensagens de reativacao para clientes inativos",
+      "method": "POST",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -1704067200033,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    }
+  ]
+}
