@@ -224,22 +224,34 @@ async function canSendMessage(
   establishmentId: string,
   messageType: MessageType
 ): Promise<{ canSend: boolean; settings?: { whatsappInstanceName: string } }> {
+  console.log('[v0] canSendMessage - buscando settings para establishmentId:', establishmentId);
+  
   const settings = await prisma.automaticMessageSettings.findUnique({
     where: { establishmentId },
   });
 
+  console.log('[v0] canSendMessage - settings encontrado:', settings ? 'sim' : 'nao');
+
   if (!settings) {
+    console.log('[v0] canSendMessage - FALHA: settings nao existe para este estabelecimento');
     return { canSend: false };
   }
 
+  console.log('[v0] canSendMessage - whatsappConnected:', settings.whatsappConnected);
+  console.log('[v0] canSendMessage - whatsappInstanceName:', settings.whatsappInstanceName);
+  console.log('[v0] canSendMessage - activeMessages:', settings.activeMessages);
+
   if (!settings.whatsappConnected || !settings.whatsappInstanceName) {
+    console.log('[v0] canSendMessage - FALHA: WhatsApp nao conectado ou instanceName vazio');
     return { canSend: false };
   }
 
   if (!settings.activeMessages.includes(messageType)) {
+    console.log('[v0] canSendMessage - FALHA: messageType', messageType, 'nao esta em activeMessages');
     return { canSend: false };
   }
 
+  console.log('[v0] canSendMessage - SUCESSO: mensagem pode ser enviada');
   return { canSend: true, settings: { whatsappInstanceName: settings.whatsappInstanceName } };
 }
 
