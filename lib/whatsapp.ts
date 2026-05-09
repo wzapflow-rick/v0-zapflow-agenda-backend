@@ -8,6 +8,7 @@ export const evolutionApi = {
   // Obter status da instância
   async getInstanceStatus(instanceName: string): Promise<{ connected: boolean; qrCode?: string }> {
     if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
+      console.log('[Evolution API] Variaveis de ambiente nao configuradas');
       return { connected: false };
     }
 
@@ -20,13 +21,25 @@ export const evolutionApi = {
       });
 
       if (!response.ok) {
+        console.log('[Evolution API] Response not ok:', response.status);
         return { connected: false };
       }
 
       const data = await response.json();
+      console.log('[Evolution API] Response data:', JSON.stringify(data));
+      
+      // Evolution API pode retornar o status em diferentes formatos
+      const isConnected = 
+        data.state === 'open' || 
+        data.state === 'connected' ||
+        data.instance?.state === 'open' ||
+        data.instance?.state === 'connected' ||
+        data.status === 'open' ||
+        data.status === 'connected';
+      
       return {
-        connected: data.state === 'open',
-        qrCode: data.qrcode?.base64,
+        connected: isConnected,
+        qrCode: data.qrcode?.base64 || data.qr?.base64,
       };
     } catch (error) {
       console.error('[Evolution API] Erro ao obter status:', error);
@@ -363,15 +376,25 @@ async function logMessage(params: {
   clientId?: string;
 }) {
   try {
+    // Busca o settings do estabelecimento
+    const settings = await prisma.automaticMessageSettings.findUnique({
+      where: { establishmentId: params.establishmentId },
+    });
+
+    if (!settings) {
+      console.error('[WhatsApp] Erro ao registrar log: settings nao encontrado');
+      return;
+    }
+
     await prisma.messageLog.create({
       data: {
-        establishmentId: params.establishmentId,
+        settingsId: settings.id,
         messageType: params.messageType,
         recipientPhone: params.recipientPhone,
         recipientName: params.recipientName,
         content: params.content,
         status: params.status,
-        errorMessage: params.errorMessage,
+        error: params.errorMessage,
         sentAt: params.status === 'SENT' ? new Date() : null,
         appointmentId: params.appointmentId,
         clientId: params.clientId,

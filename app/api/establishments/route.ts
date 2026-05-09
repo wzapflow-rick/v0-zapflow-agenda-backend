@@ -34,6 +34,18 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Funcao para gerar slug a partir do nome
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+    .replace(/[^a-z0-9\s-]/g, '') // Remove caracteres especiais
+    .replace(/\s+/g, '-') // Substitui espacos por hifens
+    .replace(/-+/g, '-') // Remove hifens duplicados
+    .replace(/^-|-$/g, ''); // Remove hifens no inicio e fim
+}
+
 // PUT /api/establishments - Atualizar estabelecimento do usuário logado
 export async function PUT(request: NextRequest) {
   try {
@@ -52,13 +64,20 @@ export async function PUT(request: NextRequest) {
       throw new NotFoundError('Estabelecimento');
     }
 
-    // Se está atualizando o slug, verifica se já existe
-    if (data.slug && data.slug !== establishment.slug) {
+    // Se o nome mudou e slug não foi fornecido, gera novo slug automaticamente
+    let newSlug = data.slug;
+    if (data.name && data.name !== establishment.name && !data.slug) {
+      newSlug = generateSlug(data.name);
+    }
+
+    // Se está atualizando o slug (fornecido ou gerado), verifica se já existe
+    if (newSlug && newSlug !== establishment.slug) {
       const existingSlug = await prisma.establishment.findUnique({
-        where: { slug: data.slug },
+        where: { slug: newSlug },
       });
       if (existingSlug) {
-        return success({ error: 'Slug já está em uso' }, 409);
+        // Se slug gerado ja existe, adiciona numero aleatorio
+        newSlug = `${newSlug}-${Math.floor(Math.random() * 1000)}`;
       }
     }
 
@@ -71,7 +90,7 @@ export async function PUT(request: NextRequest) {
       where: { id: establishment.id },
       data: {
         name: data.name,
-        slug: data.slug,
+        slug: newSlug,
         description: data.description,
         phone: data.phone,
         email: data.email,

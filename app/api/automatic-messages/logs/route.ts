@@ -21,8 +21,21 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
+    // Busca o settings do estabelecimento para filtrar logs
+    const settings = await prisma.automaticMessageSettings.findUnique({
+      where: { establishmentId: authResult.establishmentId },
+    });
+
+    if (!settings) {
+      return success({
+        logs: [],
+        stats: { total: 0, sent: 0, failed: 0, pending: 0 },
+        pagination: { page, limit, total: 0, totalPages: 0 },
+      });
+    }
+
     const where: Record<string, unknown> = {
-      establishmentId: authResult.establishmentId,
+      settingsId: settings.id,
     };
 
     if (messageType) where.messageType = messageType;
@@ -60,7 +73,7 @@ export async function GET(request: NextRequest) {
     // Estatísticas
     const stats = await prisma.messageLog.groupBy({
       by: ['status'],
-      where: { establishmentId: authResult.establishmentId },
+      where: { settingsId: settings.id },
       _count: true,
     });
 
