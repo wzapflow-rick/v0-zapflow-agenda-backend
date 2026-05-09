@@ -23,6 +23,7 @@ model User {
   establishment Establishment?
   subscription  Subscription?
   passwordResets PasswordReset[]
+  notifications Notification[]
 
   @@map("users")
 }
@@ -73,6 +74,7 @@ model Establishment {
   clients         Client[]
   appointments    Appointment[]
   automaticMessageSettings AutomaticMessageSettings?
+  notifications   Notification[]
 
   @@map("establishments")
 }
@@ -324,4 +326,25 @@ enum MessageLogStatus {
   PENDING
   SENT
   FAILED
+}
+
+// Modelo de Notificacao
+model Notification {
+  id              String    @id @default(uuid())
+  type            String    // appointment_created, appointment_cancelled, appointment_reminder, client_created, whatsapp_disconnected
+  title           String
+  message         String
+  data            Json?     // dados extras (appointmentId, clientId, etc)
+  read            Boolean   @default(false)
+  
+  createdAt       DateTime  @default(now())
+
+  establishmentId String
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  
+  userId          String?   // null = notificacao para todos do estabelecimento
+  user            User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([establishmentId, read, createdAt])
+  @@map("notifications")
 }

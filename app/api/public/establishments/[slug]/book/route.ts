@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import { success, handleError, NotFoundError, ApiError } from '@/lib/api-utils';
 import { publicBookingSchema } from '@/lib/validators';
 import { sendAutomaticMessage } from '@/lib/whatsapp';
+import { notifyAppointmentCreated, notifyClientCreated } from '@/lib/notifications';
 
 // POST /api/public/[slug]/book - Criar agendamento público
 export async function POST(
@@ -51,6 +52,7 @@ export async function POST(
       },
     });
 
+    let isNewClient = false;
     if (!client) {
       client = await prisma.client.create({
         data: {
@@ -60,6 +62,7 @@ export async function POST(
           establishmentId: establishment.id,
         },
       });
+      isNewClient = true;
     }
 
     // Calcula horário de término
@@ -127,6 +130,32 @@ export async function POST(
         },
       },
     });
+
+    // Formata a data para exibicao
+    const dateFormatted = new Date(data.date).toLocaleDateString('pt-BR');
+
+    // Cria notificacao de novo agendamento (nao bloqueia)
+    notifyAppointmentCreated({
+      establishmentId: establishment.id,
+      appointmentId: appointment.id,
+      clientName: client.name,
+      serviceName: appointment.service.name,
+      date: dateFormatted,
+      time: data.startTime,
+    }).catch((error) => {
+      console.error('[Notifications] Erro ao criar notificacao de agendamento:', error);
+    });
+
+    // Se for novo cliente, cria notificacao (nao bloqueia)
+    if (isNewClient) {
+      notifyClientCreated({
+        establishmentId: establishment.id,
+        clientId: client.id,
+        clientName: client.name,
+      }).catch((error) => {
+        console.error('[Notifications] Erro ao criar notificacao de cliente:', error);
+      });
+    }
 
     // Envia mensagem de confirmacao automatica (nao bloqueia a resposta)
     sendAutomaticMessage('confirmation', {
