@@ -2,49 +2,44 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
 // POST /api/auth/verify-reset-token
+// Verifica se o codigo de recuperacao e valido
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { token } = body;
+    const { code, email } = body;
 
-    if (!token) {
+    if (!code || !email) {
       return NextResponse.json(
-        { success: false, error: 'Token e obrigatorio' },
+        { success: false, error: 'Codigo e email sao obrigatorios' },
         { status: 400 }
       );
     }
 
-    // Busca token no banco
-    const resetToken = await prisma.passwordReset.findUnique({
-      where: { token },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-          },
-        },
+    // Busca usuario pelo email
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Codigo invalido' },
+        { status: 400 }
+      );
+    }
+
+    // Busca token valido do usuario que comeca com o codigo
+    const resetToken = await prisma.passwordReset.findFirst({
+      where: {
+        userId: user.id,
+        token: { startsWith: `${code}:` },
+        used: false,
+        expiresAt: { gt: new Date() },
       },
     });
 
     if (!resetToken) {
       return NextResponse.json(
-        { success: false, error: 'Token invalido' },
-        { status: 400 }
-      );
-    }
-
-    if (resetToken.used) {
-      return NextResponse.json(
-        { success: false, error: 'Token ja foi utilizado' },
-        { status: 400 }
-      );
-    }
-
-    if (new Date() > resetToken.expiresAt) {
-      return NextResponse.json(
-        { success: false, error: 'Token expirado' },
+        { success: false, error: 'Codigo invalido ou expirado' },
         { status: 400 }
       );
     }
@@ -53,14 +48,13 @@ export async function POST(request: NextRequest) {
       success: true,
       data: {
         valid: true,
-        email: resetToken.user.email,
-        name: resetToken.user.name,
+        email: user.email,
       },
     });
   } catch (error) {
-    console.error('Erro ao verificar token:', error);
+    console.error('Erro ao verificar codigo:', error);
     return NextResponse.json(
-      { success: false, error: 'Erro ao verificar token' },
+      { success: false, error: 'Erro ao verificar codigo' },
       { status: 500 }
     );
   }
