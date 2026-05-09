@@ -159,16 +159,26 @@ export async function POST(
 
     // Envia mensagem de confirmacao automatica (nao bloqueia a resposta)
     sendAutomaticMessage('confirmation', {
-      establishmentId: establishment.id,
-      appointmentId: appointment.id,
-      clientId: client.id,
-      clientName: client.name,
-      clientPhone: client.phone,
-      professionalName: appointment.professional.name,
-      serviceName: appointment.service.name,
-      date: data.date,
+      id: appointment.id,
+      date: new Date(data.date),
       startTime: data.startTime,
-      establishmentName: establishment.name,
+      client: {
+        id: client.id,
+        name: client.name,
+        phone: client.phone,
+      },
+      professional: {
+        name: appointment.professional.name,
+      },
+      service: {
+        name: appointment.service.name,
+      },
+      establishment: {
+        id: establishment.id,
+        name: establishment.name,
+        slug: establishment.slug,
+        address: establishment.address,
+      },
     }).catch((error) => {
       console.error('[WhatsApp] Erro ao enviar mensagem de confirmacao:', error);
     });
