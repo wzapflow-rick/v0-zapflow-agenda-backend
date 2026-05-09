@@ -6,18 +6,21 @@ import prisma from '@/lib/prisma';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { code, email } = body;
+    const { code, phone } = body;
 
-    if (!code || !email) {
+    if (!code || !phone) {
       return NextResponse.json(
-        { success: false, error: 'Codigo e email sao obrigatorios' },
+        { success: false, error: 'Codigo e telefone sao obrigatorios' },
         { status: 400 }
       );
     }
 
-    // Busca usuario pelo email
-    const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
+    // Normaliza o telefone
+    const normalizedPhone = phone.replace(/\D/g, '');
+
+    // Busca usuario pelo telefone
+    const user = await prisma.user.findFirst({
+      where: { phone: { contains: normalizedPhone.slice(-9) } },
     });
 
     if (!user) {
@@ -48,7 +51,6 @@ export async function POST(request: NextRequest) {
       success: true,
       data: {
         valid: true,
-        email: user.email,
       },
     });
   } catch (error) {

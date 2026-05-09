@@ -39,26 +39,29 @@ async function sendWhatsAppMessage(phone: string, message: string): Promise<bool
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email } = body;
+    const { phone } = body;
 
-    if (!email) {
+    if (!phone) {
       return NextResponse.json(
-        { success: false, error: 'Email e obrigatorio' },
+        { success: false, error: 'Telefone e obrigatorio' },
         { status: 400 }
       );
     }
 
-    // Busca usuario pelo email COM telefone
-    const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
+    // Normaliza o telefone (remove caracteres nao numericos)
+    const normalizedPhone = phone.replace(/\D/g, '');
+
+    // Busca usuario pelo telefone
+    const user = await prisma.user.findFirst({
+      where: { phone: { contains: normalizedPhone.slice(-9) } },
       select: { id: true, name: true, phone: true },
     });
 
-    // Sempre retorna sucesso para nao revelar se o email existe
+    // Sempre retorna sucesso para nao revelar se o telefone existe
     if (!user) {
       return NextResponse.json({
         success: true,
-        message: 'Se o email existir, voce recebera um codigo para redefinir sua senha',
+        message: 'Se o numero existir, voce recebera um codigo via WhatsApp',
       });
     }
 
@@ -71,36 +74,29 @@ export async function POST(request: NextRequest) {
       data: { used: true },
     });
 
-    // Gera codigo de 6 digitos (mais facil de digitar que hash longo)
+    // Gera codigo de 6 digitos
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const token = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
 
-    // Salva token no banco (guarda o codigo no campo token para verificacao)
+    // Salva token no banco
     await prisma.passwordReset.create({
       data: {
-        token: `${code}:${token}`, // Formato: codigo:token_seguro
+        token: `${code}:${token}`,
         userId: user.id,
         expiresAt,
       },
     });
 
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
-
-    // Envia codigo via WhatsApp se o usuario tiver telefone
-    let whatsappSent = false;
-    if (user.phone) {
-      const message = `*ZapAgenda - Recuperacao de Senha*\n\nOla ${user.name || ''}!\n\nSeu codigo de recuperacao de senha e:\n\n*${code}*\n\nEsse codigo expira em 15 minutos.\n\nSe voce nao solicitou, ignore esta mensagem.`;
-      
-      whatsappSent = await sendWhatsAppMessage(user.phone, message);
-    }
+    // Envia codigo via WhatsApp
+    const message = `*ZapAgenda - Recuperacao de Senha*\n\nOla ${user.name || ''}!\n\nSeu codigo de recuperacao de senha e:\n\n*${code}*\n\nEsse codigo expira em 15 minutos.\n\nSe voce nao solicitou, ignore esta mensagem.`;
+    
+    const whatsappSent = await sendWhatsAppMessage(user.phone!, message);
 
     return NextResponse.json({
       success: true,
-      message: 'Se o email existir, voce recebera um codigo para redefinir sua senha',
-      sentVia: whatsappSent ? 'whatsapp' : 'none',
-      // Para testes - remover em producao
-      debug: { code, resetUrl, whatsappSent },
+      message: 'Se o numero existir, voce recebera um codigo via WhatsApp',
+      sent: whatsappSent,
     });
   } catch (error) {
     console.error('Erro ao solicitar recuperacao de senha:', error);

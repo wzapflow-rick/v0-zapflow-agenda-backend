@@ -6,11 +6,11 @@ import bcrypt from 'bcryptjs';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { code, email, password } = body;
+    const { code, phone, password } = body;
 
-    if (!code || !email || !password) {
+    if (!code || !phone || !password) {
       return NextResponse.json(
-        { success: false, error: 'Codigo, email e senha sao obrigatorios' },
+        { success: false, error: 'Codigo, telefone e senha sao obrigatorios' },
         { status: 400 }
       );
     }
@@ -22,9 +22,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Busca usuario pelo email
-    const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
+    // Normaliza o telefone
+    const normalizedPhone = phone.replace(/\D/g, '');
+
+    // Busca usuario pelo telefone
+    const user = await prisma.user.findFirst({
+      where: { phone: { contains: normalizedPhone.slice(-9) } },
     });
 
     if (!user) {
