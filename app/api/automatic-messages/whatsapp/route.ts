@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { authenticate, isAuthError } from '@/lib/auth';
 import { success, handleError, NotFoundError, ApiError } from '@/lib/api-utils';
+import { evolutionApi } from '@/lib/whatsapp';
 
 const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL;
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY;
@@ -42,26 +43,34 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Verifica status da instância na Evolution API
+    // Verifica status da instância na Evolution API usando funcao centralizada
     try {
-      const statusResponse = await fetch(
-        `${EVOLUTION_API_URL}/instance/connectionState/${instanceName}`,
-        {
-          headers: { 'apikey': EVOLUTION_API_KEY },
-        }
-      );
-
-      if (statusResponse.ok) {
-        const statusData = await statusResponse.json();
-        
-        if (statusData.state === 'open') {
-          // Já está conectado
-          return success({
-            connected: true,
-            phone: settings?.whatsappPhone,
-            instanceName,
+      const evolutionStatus = await evolutionApi.getInstanceStatus(instanceName);
+      
+      // Se está conectado, atualiza o banco e retorna
+      if (evolutionStatus.connected) {
+        // Atualiza o banco se necessario
+        if (!settings?.whatsappConnected) {
+          await prisma.automaticMessageSettings.upsert({
+            where: { establishmentId: authResult.establishmentId },
+            update: { 
+              whatsappConnected: true,
+              whatsappInstanceName: instanceName,
+            },
+            create: {
+              establishmentId: authResult.establishmentId,
+              whatsappInstanceName: instanceName,
+              whatsappConnected: true,
+              activeMessages: [],
+            },
           });
         }
+        
+        return success({
+          connected: true,
+          phone: settings?.whatsappPhone,
+          instanceName,
+        });
       }
 
       // Se não está conectado, tenta gerar QR Code
