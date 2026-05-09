@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import crypto from 'crypto';
 
 const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL;
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY;
+
+// Armazena codigos temporarios em memoria (em producao, usar Redis)
+// Formato: { "5511999999999": { code: "123456", expiresAt: Date } }
+const resetCodes = new Map<string, { code: string; expiresAt: Date }>();
 
 // Envia mensagem via WhatsApp
 async function sendWhatsAppMessage(phone: string, message: string): Promise<boolean> {
@@ -13,7 +15,6 @@ async function sendWhatsAppMessage(phone: string, message: string): Promise<bool
   }
 
   try {
-    // Usa uma instancia global para envio de mensagens do sistema
     const instanceName = 'ZapFlow-Sistema';
     
     const response = await fetch(`${EVOLUTION_API_URL}/message/sendText/${instanceName}`, {
@@ -23,7 +24,7 @@ async function sendWhatsAppMessage(phone: string, message: string): Promise<bool
         'apikey': EVOLUTION_API_KEY,
       },
       body: JSON.stringify({
-        number: phone.replace(/\D/g, ''),
+        number: phone,
         text: message,
       }),
     });
@@ -34,6 +35,9 @@ async function sendWhatsAppMessage(phone: string, message: string): Promise<bool
     return false;
   }
 }
+
+// Exporta para usar nas outras rotas
+export { resetCodes };
 
 // POST /api/auth/forgot-password
 export async function POST(request: NextRequest) {
@@ -48,54 +52,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Normaliza o telefone (remove caracteres nao numericos)
-    const normalizedPhone = phone.replace(/\D/g, '');
-
-    // Busca usuario pelo telefone
-    const user = await prisma.user.findFirst({
-      where: { phone: { contains: normalizedPhone.slice(-9) } },
-      select: { id: true, name: true, phone: true },
-    });
-
-    // Sempre retorna sucesso para nao revelar se o telefone existe
-    if (!user) {
-      return NextResponse.json({
-        success: true,
-        message: 'Se o numero existir, voce recebera um codigo via WhatsApp',
-      });
+    // Normaliza o telefone - adiciona 55 se nao tiver
+    let normalizedPhone = phone.replace(/\D/g, '');
+    if (!normalizedPhone.startsWith('55')) {
+      normalizedPhone = '55' + normalizedPhone;
     }
-
-    // Invalida tokens anteriores
-    await prisma.passwordReset.updateMany({
-      where: { 
-        userId: user.id,
-        used: false,
-      },
-      data: { used: true },
-    });
 
     // Gera codigo de 6 digitos
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const token = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
 
-    // Salva token no banco
-    await prisma.passwordReset.create({
-      data: {
-        token: `${code}:${token}`,
-        userId: user.id,
-        expiresAt,
-      },
-    });
+    // Salva codigo em memoria
+    resetCodes.set(normalizedPhone, { code, expiresAt });
 
     // Envia codigo via WhatsApp
-    const message = `*ZapAgenda - Recuperacao de Senha*\n\nOla ${user.name || ''}!\n\nSeu codigo de recuperacao de senha e:\n\n*${code}*\n\nEsse codigo expira em 15 minutos.\n\nSe voce nao solicitou, ignore esta mensagem.`;
+    const message = `*ZapAgenda - Recuperacao de Senha*\n\nSeu codigo de recuperacao de senha e:\n\n*${code}*\n\nEsse codigo expira em 15 minutos.\n\nSe voce nao solicitou, ignore esta mensagem.`;
     
-    const whatsappSent = await sendWhatsAppMessage(user.phone!, message);
+    const whatsappSent = await sendWhatsAppMessage(normalizedPhone, message);
 
     return NextResponse.json({
       success: true,
-      message: 'Se o numero existir, voce recebera um codigo via WhatsApp',
+      message: 'Codigo enviado via WhatsApp',
       sent: whatsappSent,
     });
   } catch (error) {

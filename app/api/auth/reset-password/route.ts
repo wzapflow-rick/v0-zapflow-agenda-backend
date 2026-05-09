@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { resetCodes } from '../forgot-password/route';
 
 // POST /api/auth/reset-password
 export async function POST(request: NextRequest) {
@@ -23,47 +24,46 @@ export async function POST(request: NextRequest) {
     }
 
     // Normaliza o telefone
-    const normalizedPhone = phone.replace(/\D/g, '');
+    let normalizedPhone = phone.replace(/\D/g, '');
+    if (!normalizedPhone.startsWith('55')) {
+      normalizedPhone = '55' + normalizedPhone;
+    }
 
-    // Busca usuario pelo telefone
-    const user = await prisma.user.findFirst({
-      where: { phone: { contains: normalizedPhone.slice(-9) } },
-    });
+    // Verifica codigo em memoria
+    const stored = resetCodes.get(normalizedPhone);
 
-    if (!user) {
+    if (!stored) {
       return NextResponse.json(
         { success: false, error: 'Codigo invalido' },
         { status: 400 }
       );
     }
 
-    // Busca token valido do usuario que comeca com o codigo
-    const resetToken = await prisma.passwordReset.findFirst({
-      where: {
-        userId: user.id,
-        token: { startsWith: `${code}:` },
-        used: false,
-        expiresAt: { gt: new Date() },
-      },
+    if (new Date() > stored.expiresAt) {
+      resetCodes.delete(normalizedPhone);
+      return NextResponse.json(
+        { success: false, error: 'Codigo expirado' },
+        { status: 400 }
+      );
+    }
+
+    if (stored.code !== code) {
+      return NextResponse.json(
+        { success: false, error: 'Codigo invalido' },
+        { status: 400 }
+      );
+    }
+
+    // Busca usuario pelo email (precisa do email para identificar o usuario)
+    // Como estamos simplificando, vamos buscar pelo telefone do estabelecimento
+    const establishment = await prisma.establishment.findFirst({
+      where: { phone: { contains: normalizedPhone.slice(-9) } },
+      include: { user: true },
     });
 
-    if (!resetToken) {
+    if (!establishment || !establishment.user) {
       return NextResponse.json(
-        { success: false, error: 'Token invalido' },
-        { status: 400 }
-      );
-    }
-
-    if (resetToken.used) {
-      return NextResponse.json(
-        { success: false, error: 'Token ja foi utilizado' },
-        { status: 400 }
-      );
-    }
-
-    if (new Date() > resetToken.expiresAt) {
-      return NextResponse.json(
-        { success: false, error: 'Token expirado' },
+        { success: false, error: 'Usuario nao encontrado para este telefone' },
         { status: 400 }
       );
     }
@@ -71,17 +71,14 @@ export async function POST(request: NextRequest) {
     // Hash da nova senha
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Atualiza senha e marca token como usado em uma transacao
-    await prisma.$transaction([
-      prisma.user.update({
-        where: { id: user.id },
-        data: { password: hashedPassword },
-      }),
-      prisma.passwordReset.update({
-        where: { id: resetToken.id },
-        data: { used: true },
-      }),
-    ]);
+    // Atualiza senha
+    await prisma.user.update({
+      where: { id: establishment.user.id },
+      data: { password: hashedPassword },
+    });
+
+    // Remove codigo da memoria
+    resetCodes.delete(normalizedPhone);
 
     return NextResponse.json({
       success: true,
