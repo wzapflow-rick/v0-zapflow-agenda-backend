@@ -54,14 +54,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Busca usuario pelo email (precisa do email para identificar o usuario)
-    // Como estamos simplificando, vamos buscar pelo telefone do estabelecimento
-    const establishment = await prisma.establishment.findFirst({
+    // Busca usuario pelo telefone
+    const user = await prisma.user.findFirst({
       where: { phone: { contains: normalizedPhone.slice(-9) } },
-      include: { user: true },
     });
 
-    if (!establishment || !establishment.user) {
+    if (!user) {
       return NextResponse.json(
         { success: false, error: 'Usuario nao encontrado para este telefone' },
         { status: 400 }
@@ -73,7 +71,7 @@ export async function POST(request: NextRequest) {
 
     // Atualiza senha
     await prisma.user.update({
-      where: { id: establishment.user.id },
+      where: { id: user.id },
       data: { password: hashedPassword },
     });
 
