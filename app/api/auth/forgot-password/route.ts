@@ -15,7 +15,7 @@ async function sendWhatsAppMessage(phone: string, message: string): Promise<bool
   }
 
   try {
-    const instanceName = 'ZapFlow-Sistema';
+    const instanceName = 'SimpleCRM';
     
     const response = await fetch(`${EVOLUTION_API_URL}/message/sendText/${instanceName}`, {
       method: 'POST',
