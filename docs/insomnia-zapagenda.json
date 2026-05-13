@@ -1,0 +1,337 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2024-01-15T00:00:00.000Z",
+  "__export_source": "insomnia.desktop.app:v2023.5.8",
+  "resources": [
+    {
+      "_id": "wrk_zapagenda",
+      "parentId": null,
+      "modified": 1705276800000,
+      "created": 1705276800000,
+      "name": "ZapAgenda API",
+      "description": "API do ZapAgenda - Sistema de Agendamentos",
+      "scope": "collection",
+      "_type": "workspace"
+    },
+    {
+      "_id": "env_base",
+      "parentId": "wrk_zapagenda",
+      "modified": 1705276800000,
+      "created": 1705276800000,
+      "name": "Base Environment",
+      "data": {
+        "base_url": "https://v0-zapflow-agenda-backend.vercel.app",
+        "token": "SEU_TOKEN_AQUI"
+      },
+      "dataPropertyOrder": {
+        "&": ["base_url", "token"]
+      },
+      "_type": "environment"
+    },
+    {
+      "_id": "env_local",
+      "parentId": "env_base",
+      "modified": 1705276800000,
+      "created": 1705276800000,
+      "name": "Local",
+      "data": {
+        "base_url": "http://localhost:3000"
+      },
+      "_type": "environment"
+    },
+    {
+      "_id": "fld_plans",
+      "parentId": "wrk_zapagenda",
+      "modified": 1705276800000,
+      "created": 1705276800000,
+      "name": "Planos",
+      "description": "Rotas de gerenciamento de planos",
+      "_type": "request_group"
+    },
+    {
+      "_id": "fld_subscriptions",
+      "parentId": "wrk_zapagenda",
+      "modified": 1705276800000,
+      "created": 1705276800000,
+      "name": "Assinaturas",
+      "description": "Rotas de assinaturas e pagamentos",
+      "_type": "request_group"
+    },
+    {
+      "_id": "fld_auth",
+      "parentId": "wrk_zapagenda",
+      "modified": 1705276800000,
+      "created": 1705276800000,
+      "name": "Autenticacao",
+      "description": "Rotas de autenticacao",
+      "_type": "request_group"
+    },
+    {
+      "_id": "fld_webhooks",
+      "parentId": "wrk_zapagenda",
+      "modified": 1705276800000,
+      "created": 1705276800000,
+      "name": "Webhooks",
+      "description": "Webhooks de integracao",
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_seed_plans",
+      "parentId": "fld_plans",
+      "modified": 1705276800000,
+      "created": 1705276800000,
+      "url": "{{ _.base_url }}/api/plans/seed?secret=zapagenda2024",
+      "name": "1. Criar Planos no Banco (RODAR 1x)",
+      "description": "Cria os 3 planos (Essencial, Professional, Elite) no banco de dados. Rodar apenas uma vez.",
+      "method": "POST",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "_type": "request"
+    },
+    {
+      "_id": "req_list_plans",
+      "parentId": "fld_plans",
+      "modified": 1705276800000,
+      "created": 1705276800000,
+      "url": "{{ _.base_url }}/api/plans",
+      "name": "2. Listar Planos Disponiveis",
+      "description": "Retorna todos os planos ativos ordenados por preco",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_subscription",
+      "parentId": "fld_subscriptions",
+      "modified": 1705276800000,
+      "created": 1705276800000,
+      "url": "{{ _.base_url }}/api/subscriptions",
+      "name": "1. Obter Assinatura Atual",
+      "description": "Retorna a assinatura atual do estabelecimento",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "_type": "request"
+    },
+    {
+      "_id": "req_create_subscription",
+      "parentId": "fld_subscriptions",
+      "modified": 1705276800000,
+      "created": 1705276800000,
+      "url": "{{ _.base_url }}/api/subscriptions",
+      "name": "2. Assinar Plano (Gerar Link Pagamento)",
+      "description": "Cria preferencia de pagamento no Mercado Pago e retorna link para checkout",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"planId\": \"COLE_O_ID_DO_PLANO_AQUI\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_permissions",
+      "parentId": "fld_subscriptions",
+      "modified": 1705276800000,
+      "created": 1705276800000,
+      "url": "{{ _.base_url }}/api/subscriptions/permissions",
+      "name": "3. Obter Permissoes do Plano",
+      "description": "Retorna as permissoes e features disponiveis baseado no plano atual",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_usage",
+      "parentId": "fld_subscriptions",
+      "modified": 1705276800000,
+      "created": 1705276800000,
+      "url": "{{ _.base_url }}/api/subscriptions/usage",
+      "name": "4. Verificar Uso vs Limites",
+      "description": "Retorna o uso atual comparado com os limites do plano",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "_type": "request"
+    },
+    {
+      "_id": "req_cancel_subscription",
+      "parentId": "fld_subscriptions",
+      "modified": 1705276800000,
+      "created": 1705276800000,
+      "url": "{{ _.base_url }}/api/subscriptions",
+      "name": "5. Cancelar Assinatura",
+      "description": "Cancela a assinatura atual do estabelecimento",
+      "method": "DELETE",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{ _.token }}"
+        }
+      ],
+      "authentication": {},
+      "_type": "request"
+    },
+    {
+      "_id": "req_login",
+      "parentId": "fld_auth",
+      "modified": 1705276800000,
+      "created": 1705276800000,
+      "url": "{{ _.base_url }}/api/auth/login",
+      "name": "1. Login",
+      "description": "Faz login e retorna token JWT",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"seu@email.com\",\n  \"password\": \"suaSenha123\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "_type": "request"
+    },
+    {
+      "_id": "req_forgot_password",
+      "parentId": "fld_auth",
+      "modified": 1705276800000,
+      "created": 1705276800000,
+      "url": "{{ _.base_url }}/api/auth/forgot-password",
+      "name": "2. Esqueci Senha (Enviar Codigo)",
+      "description": "Envia codigo de 6 digitos via WhatsApp",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"phone\": \"11999999999\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "_type": "request"
+    },
+    {
+      "_id": "req_verify_reset_token",
+      "parentId": "fld_auth",
+      "modified": 1705276800000,
+      "created": 1705276800000,
+      "url": "{{ _.base_url }}/api/auth/verify-reset-token",
+      "name": "3. Verificar Codigo",
+      "description": "Verifica se o codigo de recuperacao e valido",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"phone\": \"11999999999\",\n  \"code\": \"123456\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "_type": "request"
+    },
+    {
+      "_id": "req_reset_password",
+      "parentId": "fld_auth",
+      "modified": 1705276800000,
+      "created": 1705276800000,
+      "url": "{{ _.base_url }}/api/auth/reset-password",
+      "name": "4. Redefinir Senha",
+      "description": "Redefine a senha usando o codigo enviado",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"phone\": \"11999999999\",\n  \"code\": \"123456\",\n  \"password\": \"novaSenha123\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "_type": "request"
+    },
+    {
+      "_id": "req_webhook_mp",
+      "parentId": "fld_webhooks",
+      "modified": 1705276800000,
+      "created": 1705276800000,
+      "url": "{{ _.base_url }}/api/webhooks/mercadopago",
+      "name": "Webhook Mercado Pago (Simulacao)",
+      "description": "Simula notificacao do Mercado Pago - NAO usar em producao",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"action\": \"payment.updated\",\n  \"data\": {\n    \"id\": \"123456789\"\n  }\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "_type": "request"
+    }
+  ]
+}
