@@ -3,17 +3,46 @@ import prisma from '@/lib/prisma';
 import { authenticate, isAuthError } from '@/lib/auth';
 import { success, handleError } from '@/lib/api-utils';
 
-// Limites do plano Free
-const FREE_PLAN_LIMITS = {
-  maxProfessionals: 1,
-  maxServices: 3,
-  maxAppointments: 50,
-  features: {
-    whatsappMessages: false,
-    customBranding: false,
-    reports: false,
-    multipleLocations: false,
+// Features padrao para cada plano
+const PLAN_FEATURES = {
+  Essencial: {
+    whatsappAutomations: 3,
+    bookingPage: true,
+    instagramBioLink: true,
+    onlinePayment: false,
+    financialDashboard: false,
     prioritySupport: false,
+    recurringAppointments: false,
+    paymentSplit: false,
+    waitlist: false,
+    advancedBI: false,
+    retentionReports: false,
+  },
+  Professional: {
+    whatsappAutomations: 999,
+    bookingPage: true,
+    instagramBioLink: true,
+    onlinePayment: true,
+    financialDashboard: true,
+    prioritySupport: true,
+    recurringAppointments: false,
+    paymentSplit: false,
+    waitlist: false,
+    advancedBI: false,
+    retentionReports: false,
+  },
+  Elite: {
+    whatsappAutomations: 999,
+    bookingPage: true,
+    instagramBioLink: true,
+    onlinePayment: true,
+    financialDashboard: true,
+    prioritySupport: true,
+    recurringAppointments: true,
+    paymentSplit: true,
+    waitlist: true,
+    advancedBI: true,
+    retentionReports: true,
   },
 };
 
@@ -29,45 +58,67 @@ export async function GET(request: NextRequest) {
       include: { plan: true },
     });
 
-    // Verifica se tem assinatura ativa
+    // Verifica se tem assinatura ativa ou em trial
     const isSubscriptionActive = subscription && 
-      subscription.status === 'ACTIVE' &&
+      (subscription.status === 'ACTIVE' || subscription.status === 'TRIALING') &&
       (!subscription.endDate || new Date(subscription.endDate) > new Date());
 
     if (!isSubscriptionActive || !subscription?.plan) {
-      // Retorna limites do plano Free
+      // Usuario sem assinatura - nao pode usar o sistema
       return success({
-        planName: 'Free',
+        planName: null,
         isActive: false,
+        hasSubscription: false,
         limits: {
-          maxProfessionals: FREE_PLAN_LIMITS.maxProfessionals,
-          maxServices: FREE_PLAN_LIMITS.maxServices,
-          maxAppointments: FREE_PLAN_LIMITS.maxAppointments,
+          maxProfessionals: 0,
+          maxServices: 0,
+          maxAppointments: 0,
         },
-        features: FREE_PLAN_LIMITS.features,
+        features: {
+          whatsappAutomations: 0,
+          bookingPage: false,
+          instagramBioLink: false,
+          onlinePayment: false,
+          financialDashboard: false,
+          prioritySupport: false,
+          recurringAppointments: false,
+          paymentSplit: false,
+          waitlist: false,
+          advancedBI: false,
+          retentionReports: false,
+        },
         subscription: null,
+        message: 'Voce precisa assinar um plano para usar o sistema.',
       });
     }
 
-    // Extrai features do plano (JSON)
-    const planFeatures = subscription.plan.features as Record<string, boolean> || {};
+    // Extrai features do plano (JSON) ou usa padrao
+    const planFeatures = (subscription.plan.features as Record<string, unknown>) || 
+      PLAN_FEATURES[subscription.plan.name as keyof typeof PLAN_FEATURES] || 
+      PLAN_FEATURES.Essencial;
+
+    // Calcula dias restantes do trial se aplicavel
+    let trialDaysRemaining = 0;
+    if (subscription.status === 'TRIALING' && subscription.endDate) {
+      const now = new Date();
+      const end = new Date(subscription.endDate);
+      trialDaysRemaining = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+    }
 
     return success({
       planName: subscription.plan.name,
+      planDescription: subscription.plan.description,
+      price: subscription.plan.price,
       isActive: true,
+      hasSubscription: true,
+      isTrial: subscription.status === 'TRIALING',
+      trialDaysRemaining,
       limits: {
         maxProfessionals: subscription.plan.maxProfessionals,
         maxServices: subscription.plan.maxServices,
         maxAppointments: subscription.plan.maxAppointments,
       },
-      features: {
-        whatsappMessages: planFeatures.whatsappMessages ?? true,
-        customBranding: planFeatures.customBranding ?? false,
-        reports: planFeatures.reports ?? false,
-        multipleLocations: planFeatures.multipleLocations ?? false,
-        prioritySupport: planFeatures.prioritySupport ?? false,
-        ...planFeatures,
-      },
+      features: planFeatures,
       subscription: {
         id: subscription.id,
         status: subscription.status,
