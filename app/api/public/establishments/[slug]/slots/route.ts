@@ -65,7 +65,7 @@ export async function GET(
       return success({ slots: [], message: 'Estabelecimento fechado neste dia' });
     }
 
-    // Busca agendamentos existentes do dia
+    // Busca agendamentos existentes do dia com duracao do servico
     const existingAppointments = await prisma.appointment.findMany({
       where: {
         professionalId: query.professionalId,
@@ -74,9 +74,17 @@ export async function GET(
       },
       select: {
         startTime: true,
-        endTime: true,
+        service: {
+          select: { duration: true },
+        },
       },
     });
+
+    // Funcao auxiliar para converter "HH:MM" em minutos desde meia-noite
+    const parseTime = (time: string): number => {
+      const [h, m] = time.split(':').map(Number);
+      return h * 60 + m;
+    };
 
     // Gera slots disponíveis
     const slots: string[] = [];
@@ -91,17 +99,18 @@ export async function GET(
 
     while (currentTime + serviceDuration <= closeTime) {
       const slotStart = `${String(Math.floor(currentTime / 60)).padStart(2, '0')}:${String(currentTime % 60).padStart(2, '0')}`;
-      const slotEndMinutes = currentTime + serviceDuration;
-      const slotEnd = `${String(Math.floor(slotEndMinutes / 60)).padStart(2, '0')}:${String(slotEndMinutes % 60).padStart(2, '0')}`;
+      
+      // Novo agendamento: inicio e fim em minutos
+      const newStart = currentTime;
+      const newEnd = currentTime + serviceDuration;
 
-      // Verifica se conflita com agendamentos existentes
-      const slotStartDate = new Date(`1970-01-01T${slotStart}:00`);
-      const slotEndDate = new Date(`1970-01-01T${slotEnd}:00`);
-
+      // Verifica sobreposicao com agendamentos existentes
       const hasConflict = existingAppointments.some(apt => {
-        const aptStart = new Date(apt.startTime);
-        const aptEnd = new Date(apt.endTime);
-        return (slotStartDate < aptEnd && slotEndDate > aptStart);
+        const existingStart = parseTime(apt.startTime);
+        const existingEnd = existingStart + apt.service.duration;
+        
+        // Sobreposicao: novo comeca antes do existente terminar E novo termina depois do existente comecar
+        return (newStart < existingEnd) && (newEnd > existingStart);
       });
 
       if (!hasConflict) {
