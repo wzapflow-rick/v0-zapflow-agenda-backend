@@ -12,7 +12,7 @@ const updateStatusSchema = z.object({
 
 // Mapeia status para tipo de mensagem
 const STATUS_TO_MESSAGE_TYPE: Record<string, MessageType | null> = {
-  CONFIRMED: 'confirmation',
+  CONFIRMED: 'confirmed',
   CANCELLED: 'cancellation',
   COMPLETED: 'thank_you',
   NO_SHOW: 'no_show',

@@ -109,6 +109,7 @@ export const evolutionApi = {
 // Tipos de mensagens disponíveis
 export type MessageType = 
   | 'confirmation'
+  | 'confirmed'
   | 'reminder_24h'
   | 'reminder_1h'
   | 'thank_you'
@@ -145,6 +146,17 @@ Seu agendamento foi *enviado* e os responsáveis foram notificados!
 📍 {establishmentName}
 
 Aguarde a confirmação do estabelecimento.`,
+
+  confirmed: `Olá {clientName}! ✅
+
+Seu agendamento foi *CONFIRMADO*!
+
+📅 {date} às {time}
+💇 {serviceName}
+👤 Profissional: {professionalName}
+📍 {establishmentName}
+
+Te esperamos!`,
 
   reminder_24h: `Olá {clientName}! 
 
