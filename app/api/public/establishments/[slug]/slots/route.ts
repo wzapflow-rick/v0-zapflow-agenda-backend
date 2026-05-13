@@ -86,9 +86,8 @@ export async function GET(
       return h * 60 + m;
     };
 
-    // Gera slots disponíveis
+    // Gera slots disponíveis baseado na duracao do servico
     const slots: string[] = [];
-    const slotDuration = establishment.slotDuration;
     const serviceDuration = service.duration;
 
     const [openHour, openMin] = hours.openTime.split(':').map(Number);
@@ -117,7 +116,8 @@ export async function GET(
         slots.push(slotStart);
       }
 
-      currentTime += slotDuration;
+      // Incrementa pela duracao do servico
+      currentTime += serviceDuration;
     }
 
     return success({ slots, date: query.date, serviceDuration });
