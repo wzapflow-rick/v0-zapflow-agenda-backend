@@ -2,12 +2,22 @@ import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { authenticate, isAuthError } from '@/lib/auth';
 import { success, handleError } from '@/lib/api-utils';
-import { NotFoundError, ForbiddenError, ValidationError } from '@/lib/api-utils';
+import { NotFoundError, ForbiddenError } from '@/lib/api-utils';
 import { z } from 'zod';
+import { sendAutomaticMessage, MessageType } from '@/lib/whatsapp';
 
 const updateStatusSchema = z.object({
   status: z.enum(['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED', 'NO_SHOW']),
 });
+
+// Mapeia status para tipo de mensagem
+const STATUS_TO_MESSAGE_TYPE: Record<string, MessageType | null> = {
+  CONFIRMED: 'confirmation',
+  CANCELLED: 'cancellation',
+  COMPLETED: 'thank_you',
+  NO_SHOW: 'no_show',
+  PENDING: null,
+};
 
 // PUT /api/appointments/[id]/status - Atualizar status do agendamento
 export async function PUT(
@@ -26,6 +36,9 @@ export async function PUT(
       where: { id },
       include: {
         professional: true,
+        client: true,
+        service: true,
+        establishment: true,
       },
     });
 
@@ -46,6 +59,35 @@ export async function PUT(
         service: true,
       },
     });
+
+    // Envia mensagem automatica baseada no novo status (nao bloqueia a resposta)
+    const messageType = STATUS_TO_MESSAGE_TYPE[status];
+    if (messageType) {
+      sendAutomaticMessage(messageType, {
+        id: appointment.id,
+        date: appointment.date,
+        startTime: appointment.startTime,
+        client: {
+          id: appointment.client.id,
+          name: appointment.client.name,
+          phone: appointment.client.phone,
+        },
+        professional: {
+          name: appointment.professional.name,
+        },
+        service: {
+          name: appointment.service.name,
+        },
+        establishment: {
+          id: appointment.establishment.id,
+          name: appointment.establishment.name,
+          slug: appointment.establishment.slug,
+          address: appointment.establishment.address,
+        },
+      }).catch((error) => {
+        console.error(`[WhatsApp] Erro ao enviar mensagem ${messageType}:`, error);
+      });
+    }
 
     return success(updated);
   } catch (error) {

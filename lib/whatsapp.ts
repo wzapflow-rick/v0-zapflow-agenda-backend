@@ -137,14 +137,14 @@ export interface MessageVariables {
 const MESSAGE_TEMPLATES: Record<MessageType, string> = {
   confirmation: `Olá {clientName}! 👋
 
-Seu agendamento foi confirmado:
+Seu agendamento foi *enviado* e os responsáveis foram notificados!
+
 📅 {date} às {time}
 💇 {serviceName}
 👤 Profissional: {professionalName}
+📍 {establishmentName}
 
-Endereço: {address}
-
-Até lá! 🙂`,
+Aguarde a confirmação do estabelecimento.`,
 
   reminder_24h: `Olá {clientName}! 
 
