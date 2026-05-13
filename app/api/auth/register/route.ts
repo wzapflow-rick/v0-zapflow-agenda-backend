@@ -4,29 +4,40 @@ import prisma from '@/lib/prisma';
 import { generateToken } from '@/lib/auth';
 import { success, handleError } from '@/lib/api-utils';
 import { registerSchema } from '@/lib/validators';
+import { withRateLimit, RATE_LIMITS, rateLimitExceeded } from '@/lib/rate-limit';
+import { auditLog, getRequestInfo } from '@/lib/audit-log';
+import { sanitizeEmail, sanitizeString, sanitizePhone, sanitizeSlug } from '@/lib/sanitize';
 
 // POST /api/auth/register
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting - previne spam de registros
+    const rateLimitResult = withRateLimit(request, RATE_LIMITS.register, 'register');
+    if (rateLimitResult) {
+      return rateLimitExceeded(rateLimitResult);
+    }
+
     const body = await request.json();
     const data = registerSchema.parse(body);
+    const { ipAddress, userAgent } = getRequestInfo(request);
 
-    // Verifica se o email já está em uso
+    // Sanitiza inputs
+    const email = sanitizeEmail(data.email);
+    const name = sanitizeString(data.name);
+    const phone = data.phone ? sanitizePhone(data.phone) : null;
+    const establishmentName = sanitizeString(data.establishmentName);
+
+    // Verifica se o email ja esta em uso
     const existingUser = await prisma.user.findUnique({
-      where: { email: data.email },
+      where: { email },
     });
 
     if (existingUser) {
-      return success({ error: 'Email já está em uso' }, 409);
+      return success({ error: 'Email ja esta em uso' }, 409);
     }
 
-    // Cria slug único para o estabelecimento
-    const baseSlug = data.establishmentName
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
+    // Cria slug unico para o estabelecimento
+    const baseSlug = sanitizeSlug(establishmentName);
 
     let slug = baseSlug;
     let counter = 1;
@@ -35,10 +46,10 @@ export async function POST(request: NextRequest) {
       counter++;
     }
 
-    // Hash da senha
-    const hashedPassword = await bcrypt.hash(data.password, 10);
+    // Hash da senha (bcrypt com cost factor 12 para maior seguranca)
+    const hashedPassword = await bcrypt.hash(data.password, 12);
 
-    // Horário de funcionamento padrão
+    // Horario de funcionamento padrao
     const defaultBusinessHours = {
       monday: { isOpen: true, openTime: '09:00', closeTime: '18:00' },
       tuesday: { isOpen: true, openTime: '09:00', closeTime: '18:00' },
@@ -49,16 +60,16 @@ export async function POST(request: NextRequest) {
       sunday: { isOpen: false, openTime: '09:00', closeTime: '18:00' },
     };
 
-    // Cria usuário com estabelecimento
+    // Cria usuario com estabelecimento
     const user = await prisma.user.create({
       data: {
-        email: data.email,
+        email,
         password: hashedPassword,
-        name: data.name,
-        phone: data.phone,
+        name,
+        phone,
         establishment: {
           create: {
-            name: data.establishmentName,
+            name: establishmentName,
             slug,
             businessHours: defaultBusinessHours,
           },
@@ -67,6 +78,16 @@ export async function POST(request: NextRequest) {
       include: {
         establishment: true,
       },
+    });
+
+    // Log de registro
+    await auditLog({
+      action: 'REGISTER',
+      userId: user.id,
+      establishmentId: user.establishment?.id,
+      ipAddress,
+      userAgent,
+      details: { email },
     });
 
     // Gera token

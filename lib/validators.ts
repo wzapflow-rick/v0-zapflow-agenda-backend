@@ -1,17 +1,29 @@
 import { z } from 'zod';
 
+// Validacao de senha forte (OWASP)
+const passwordSchema = z
+  .string()
+  .min(8, 'Senha deve ter pelo menos 8 caracteres')
+  .max(128, 'Senha muito longa')
+  .refine((val) => /[a-z]/.test(val), 'Senha deve conter letra minuscula')
+  .refine((val) => /[A-Z]/.test(val), 'Senha deve conter letra maiuscula')
+  .refine((val) => /[0-9]/.test(val), 'Senha deve conter numero');
+
+// Validacao de senha mais simples para login (apenas min length)
+const loginPasswordSchema = z.string().min(1, 'Senha e obrigatoria');
+
 // Auth
 export const registerSchema = z.object({
-  name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-  email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
-  establishmentName: z.string().min(2, 'Nome do estabelecimento deve ter pelo menos 2 caracteres'),
+  name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres').max(100),
+  email: z.string().email('Email invalido').max(254),
+  password: passwordSchema,
+  establishmentName: z.string().min(2, 'Nome do estabelecimento deve ter pelo menos 2 caracteres').max(100),
   phone: z.string().optional(),
 });
 
 export const loginSchema = z.object({
-  email: z.string().email('Email inválido'),
-  password: z.string().min(1, 'Senha é obrigatória'),
+  email: z.string().email('Email invalido').max(254),
+  password: loginPasswordSchema,
 });
 
 // Working Hours Schema - aceita ambos os formatos (sem transform para permitir partial)

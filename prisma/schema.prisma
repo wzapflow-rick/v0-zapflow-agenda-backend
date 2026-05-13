@@ -222,6 +222,9 @@ model Plan {
   // Features do plano (JSON com lista de features)
   features        Json?
   
+  // Trial em dias (0 = sem trial)
+  trialDays       Int       @default(0)
+  
   active          Boolean   @default(true)
   
   createdAt       DateTime  @default(now())
@@ -246,6 +249,7 @@ model Subscription {
   startDate             DateTime?
   endDate               DateTime?
   cancelledAt           DateTime?
+  trialEndsAt           DateTime?          // Data fim do trial
   
   // ID da assinatura no gateway de pagamento (Stripe, Mercado Pago, etc.)
   gatewaySubscriptionId String?
@@ -347,4 +351,43 @@ model Notification {
 
   @@index([establishmentId, read, createdAt])
   @@map("notifications")
+}
+
+// Modelo de Audit Log (OWASP A09 - Security Logging)
+model AuditLog {
+  id              String    @id @default(uuid())
+  action          String    // LOGIN_SUCCESS, LOGIN_FAILED, etc
+  severity        String    @default("LOW") // LOW, MEDIUM, HIGH, CRITICAL
+  
+  userId          String?
+  establishmentId String?
+  
+  ipAddress       String?
+  userAgent       String?
+  
+  resourceType    String?   // appointment, professional, service, etc
+  resourceId      String?
+  
+  details         String?   // JSON com detalhes adicionais
+  
+  createdAt       DateTime  @default(now())
+
+  @@index([action, createdAt])
+  @@index([userId, createdAt])
+  @@index([establishmentId, createdAt])
+  @@index([severity, createdAt])
+  @@map("audit_logs")
+}
+
+// Modelo para controle de tentativas de login (Account Lockout)
+model LoginAttempt {
+  id              String    @id @default(uuid())
+  email           String
+  ipAddress       String
+  success         Boolean
+  createdAt       DateTime  @default(now())
+
+  @@index([email, createdAt])
+  @@index([ipAddress, createdAt])
+  @@map("login_attempts")
 }
