@@ -417,6 +417,10 @@ export async function sendAutomaticMessage(
   appointment: AppointmentData,
   extraVariables?: Partial<MessageVariables>
 ): Promise<{ success: boolean; error?: string }> {
+  console.log('[v0] sendAutomaticMessage - INICIO');
+  console.log('[v0] sendAutomaticMessage - messageType:', messageType);
+  console.log('[v0] sendAutomaticMessage - establishment.id:', appointment.establishment?.id);
+  
   const { canSend, settings } = await canSendMessage(appointment.establishment.id, messageType);
 
   if (!canSend || !settings) {
@@ -426,8 +430,12 @@ export async function sendAutomaticMessage(
 
   const template = MESSAGE_TEMPLATES[messageType];
   if (!template) {
+    console.log('[v0] sendAutomaticMessage - ERRO: template nao encontrado para', messageType);
     return { success: false, error: 'Template não encontrado' };
   }
+
+  console.log('[v0] sendAutomaticMessage - template encontrado');
+  console.log('[v0] sendAutomaticMessage - client.phone:', appointment.client?.phone);
 
   const variables: MessageVariables = {
     clientName: appointment.client.name,
@@ -443,6 +451,8 @@ export async function sendAutomaticMessage(
   };
 
   const message = replaceVariables(template, variables);
+  console.log('[v0] sendAutomaticMessage - mensagem montada, enviando para Evolution API');
+  console.log('[v0] sendAutomaticMessage - instanceName:', settings.whatsappInstanceName);
 
   const result = await sendToEvolutionAPI(
     settings.whatsappInstanceName,
