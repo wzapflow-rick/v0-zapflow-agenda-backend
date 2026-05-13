@@ -80,8 +80,12 @@ export async function GET(
       },
     });
 
-    // Funcao auxiliar para converter "HH:MM" em minutos desde meia-noite
-    const parseTime = (time: string): number => {
+    // Funcao auxiliar para converter horario em minutos desde meia-noite
+    // Aceita string "HH:MM" ou Date
+    const parseTime = (time: string | Date): number => {
+      if (time instanceof Date) {
+        return time.getHours() * 60 + time.getMinutes();
+      }
       const [h, m] = time.split(':').map(Number);
       return h * 60 + m;
     };
