@@ -1,10 +1,15 @@
 import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { authenticate, isAuthError } from '@/lib/auth';
-import { success, handleError, NotFoundError, ApiError } from '@/lib/api-utils';
-import { createSubscriptionSchema } from '@/lib/validators';
+import { success, handleError, NotFoundError } from '@/lib/api-utils';
+import { createSubscriptionPreference } from '@/lib/mercadopago';
+import { z } from 'zod';
 
-// GET /api/subscriptions - Obter assinatura do usuário
+const createSubscriptionSchema = z.object({
+  planId: z.string().uuid(),
+});
+
+// GET /api/subscriptions - Obter assinatura do usuario
 export async function GET(request: NextRequest) {
   try {
     const authResult = await authenticate(request);
@@ -17,13 +22,36 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    return success(subscription);
+    // Se nao tem assinatura, retorna plano free por padrao
+    if (!subscription) {
+      return success({
+        subscription: null,
+        plan: {
+          name: 'Free',
+          maxProfessionals: 1,
+          maxServices: 3,
+          maxAppointments: 50,
+          features: ['1 profissional', '3 servicos', '50 agendamentos/mes'],
+        },
+        isActive: false,
+      });
+    }
+
+    // Verifica se assinatura esta ativa e nao expirou
+    const isActive = subscription.status === 'ACTIVE' && 
+      (!subscription.endDate || new Date(subscription.endDate) > new Date());
+
+    return success({
+      subscription,
+      plan: subscription.plan,
+      isActive,
+    });
   } catch (error) {
     return handleError(error);
   }
 }
 
-// POST /api/subscriptions - Criar/atualizar assinatura
+// POST /api/subscriptions - Criar preferencia de pagamento para assinar plano
 export async function POST(request: NextRequest) {
   try {
     const authResult = await authenticate(request);
@@ -32,7 +60,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const data = createSubscriptionSchema.parse(body);
 
-    // Verifica se plano existe
+    // Busca plano
     const plan = await prisma.plan.findUnique({
       where: { id: data.planId },
     });
@@ -41,26 +69,30 @@ export async function POST(request: NextRequest) {
       throw new NotFoundError('Plano');
     }
 
-    // Cria ou atualiza assinatura
-    const subscription = await prisma.subscription.upsert({
-      where: { userId: authResult.id },
-      update: {
-        planId: data.planId,
-        status: 'ACTIVE',
-        startDate: new Date(),
-      },
-      create: {
-        userId: authResult.id,
-        planId: data.planId,
-        status: 'ACTIVE',
-        startDate: new Date(),
-      },
-      include: {
-        plan: true,
-      },
+    // Busca usuario completo
+    const user = await prisma.user.findUnique({
+      where: { id: authResult.id },
     });
 
-    return success(subscription, 201);
+    if (!user) {
+      throw new NotFoundError('Usuario');
+    }
+
+    // Cria preferencia de pagamento no Mercado Pago
+    const preference = await createSubscriptionPreference({
+      planId: plan.id,
+      planName: plan.name,
+      planPrice: Number(plan.price),
+      userId: user.id,
+      userEmail: user.email,
+      userName: user.name,
+    });
+
+    return success({
+      preferenceId: preference.id,
+      initPoint: preference.init_point,
+      sandboxInitPoint: preference.sandbox_init_point,
+    }, 201);
   } catch (error) {
     return handleError(error);
   }
