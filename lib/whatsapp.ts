@@ -322,43 +322,31 @@ interface AppointmentData {
   };
 }
 
-// Verifica se a mensagem está ativa e o WhatsApp conectado
+// Verifica se o WhatsApp esta conectado (envia todas as mensagens se conectado)
 async function canSendMessage(
   establishmentId: string,
   messageType: MessageType
 ): Promise<{ canSend: boolean; settings?: { whatsappInstanceName: string } }> {
-  console.log('[v0] canSendMessage - buscando settings para establishmentId:', establishmentId);
-  
   try {
     const settings = await prisma.automaticMessageSettings.findUnique({
       where: { establishmentId },
     });
 
-    console.log('[v0] canSendMessage - settings encontrado:', settings ? 'sim' : 'nao');
-
     if (!settings) {
-      console.log('[v0] canSendMessage - FALHA: settings nao existe para este estabelecimento');
+      console.log('[WhatsApp] Settings nao encontrado para establishmentId:', establishmentId);
       return { canSend: false };
     }
-
-    console.log('[v0] canSendMessage - whatsappConnected:', settings.whatsappConnected);
-    console.log('[v0] canSendMessage - whatsappInstanceName:', settings.whatsappInstanceName);
-    console.log('[v0] canSendMessage - activeMessages:', settings.activeMessages);
 
     if (!settings.whatsappConnected || !settings.whatsappInstanceName) {
-      console.log('[v0] canSendMessage - FALHA: WhatsApp nao conectado ou instanceName vazio');
+      console.log('[WhatsApp] WhatsApp nao conectado para:', establishmentId);
       return { canSend: false };
     }
 
-    if (!settings.activeMessages.includes(messageType)) {
-      console.log('[v0] canSendMessage - FALHA: messageType', messageType, 'nao esta em activeMessages');
-      return { canSend: false };
-    }
-
-    console.log('[v0] canSendMessage - SUCESSO: mensagem pode ser enviada');
+    // Todas as mensagens sao enviadas se o WhatsApp estiver conectado
+    console.log('[WhatsApp] OK - enviando mensagem', messageType);
     return { canSend: true, settings: { whatsappInstanceName: settings.whatsappInstanceName } };
   } catch (error) {
-    console.error('[v0] canSendMessage - ERRO na query:', error);
+    console.error('[WhatsApp] Erro ao verificar settings:', error);
     return { canSend: false };
   }
 }
@@ -411,31 +399,22 @@ function getBookingUrl(slug: string): string {
   return `${baseUrl}/agendar/${slug}`;
 }
 
-// Função principal para enviar mensagem automática
+// Funcao principal para enviar mensagem automatica
 export async function sendAutomaticMessage(
   messageType: MessageType,
   appointment: AppointmentData,
   extraVariables?: Partial<MessageVariables>
 ): Promise<{ success: boolean; error?: string }> {
-  console.log('[v0] sendAutomaticMessage - INICIO');
-  console.log('[v0] sendAutomaticMessage - messageType:', messageType);
-  console.log('[v0] sendAutomaticMessage - establishment.id:', appointment.establishment?.id);
-  
   const { canSend, settings } = await canSendMessage(appointment.establishment.id, messageType);
 
   if (!canSend || !settings) {
-    console.log(`[WhatsApp] Mensagem ${messageType} não será enviada - não ativa ou WhatsApp desconectado`);
-    return { success: false, error: 'Mensagem não ativa ou WhatsApp desconectado' };
+    return { success: false, error: 'WhatsApp desconectado' };
   }
 
   const template = MESSAGE_TEMPLATES[messageType];
   if (!template) {
-    console.log('[v0] sendAutomaticMessage - ERRO: template nao encontrado para', messageType);
-    return { success: false, error: 'Template não encontrado' };
+    return { success: false, error: 'Template nao encontrado' };
   }
-
-  console.log('[v0] sendAutomaticMessage - template encontrado');
-  console.log('[v0] sendAutomaticMessage - client.phone:', appointment.client?.phone);
 
   const variables: MessageVariables = {
     clientName: appointment.client.name,
@@ -451,14 +430,16 @@ export async function sendAutomaticMessage(
   };
 
   const message = replaceVariables(template, variables);
-  console.log('[v0] sendAutomaticMessage - mensagem montada, enviando para Evolution API');
-  console.log('[v0] sendAutomaticMessage - instanceName:', settings.whatsappInstanceName);
+
+  console.log('[WhatsApp] Enviando', messageType, 'para', appointment.client.phone);
 
   const result = await sendToEvolutionAPI(
     settings.whatsappInstanceName,
     appointment.client.phone,
     message
   );
+
+  console.log('[WhatsApp] Resultado:', result.success ? 'enviado' : 'falhou', result.error || '');
 
   // Registra no log
   await logMessage({
