@@ -41,9 +41,9 @@ export async function createSubscriptionPreference(params: CreateSubscriptionPre
         name: userName,
       },
       back_urls: {
-        success: `${baseUrl}/dashboard/settings/billing?status=success`,
-        failure: `${baseUrl}/dashboard/settings/billing?status=failure`,
-        pending: `${baseUrl}/dashboard/settings/billing?status=pending`,
+        success: `${baseUrl}/dashboard?payment=success`,
+        failure: `${baseUrl}/dashboard?payment=failure`,
+        pending: `${baseUrl}/dashboard?payment=pending`,
       },
       auto_return: 'approved',
       external_reference: JSON.stringify({ userId, planId }),
