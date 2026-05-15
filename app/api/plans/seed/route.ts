@@ -4,12 +4,31 @@ import prisma from '@/lib/prisma';
 // POST /api/plans/seed - Cria os planos no banco (rodar apenas uma vez)
 export async function POST(request: NextRequest) {
   try {
+    console.log('[v0] POST /api/plans/seed - Iniciando seed de planos...');
+    
     // Verifica secret para proteger a rota
     const { searchParams } = new URL(request.url);
     const secret = searchParams.get('secret');
     
     if (secret !== process.env.SEED_SECRET && secret !== 'zapagenda2024') {
+      console.log('[v0] Seed negado - secret invalido');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    // Testa conexao com o banco primeiro
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      console.log('[v0] Conexao com banco OK');
+    } catch (dbError) {
+      console.error('[v0] Erro de conexao com banco:', dbError);
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Database connection failed',
+          details: dbError instanceof Error ? dbError.message : 'Unknown error',
+        },
+        { status: 500 }
+      );
     }
 
     const plans = [

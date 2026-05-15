@@ -11,6 +11,8 @@ import { sanitizeEmail } from '@/lib/sanitize';
 // POST /api/auth/login
 export async function POST(request: NextRequest) {
   try {
+    console.log('[v0] POST /api/auth/login - Iniciando login...');
+    
     // Rate limiting - previne brute force
     const rateLimitResult = withRateLimit(request, RATE_LIMITS.login, 'login');
     if (rateLimitResult) {
@@ -24,13 +26,17 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    console.log('[v0] Body recebido:', { email: body.email, hasPassword: !!body.password });
+    
     const data = loginSchema.parse(body);
     const { ipAddress, userAgent } = getRequestInfo(request);
 
     // Sanitiza email
     const email = sanitizeEmail(data.email);
+    console.log('[v0] Email sanitizado:', email);
 
     // Busca usuario pelo email
+    console.log('[v0] Buscando usuario no banco...');
     const user = await prisma.user.findUnique({
       where: { email },
       include: {
@@ -39,6 +45,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
+      console.log('[v0] Usuario nao encontrado para email:', email);
       // Log tentativa falha (email nao existe)
       await auditLog({
         action: 'LOGIN_FAILED',
@@ -48,6 +55,8 @@ export async function POST(request: NextRequest) {
       });
       throw new ApiError('Email ou senha invalidos', 401);
     }
+
+    console.log('[v0] Usuario encontrado:', { id: user.id, hasPassword: !!user.password });
 
     // Verifica a senha
     const isPasswordValid = await bcrypt.compare(data.password, user.password);
