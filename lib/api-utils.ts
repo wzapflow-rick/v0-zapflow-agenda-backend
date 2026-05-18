@@ -45,7 +45,31 @@ export function handleError(err: unknown): NextResponse<ApiResponse> {
       return error('Registro já existe', 409);
     }
 
-    return error(err.message, 500);
+    // Erro do Prisma - tabela ou coluna não existe
+    if (err.message.includes('does not exist') || 
+        err.message.includes('relation') ||
+        err.message.includes('column')) {
+      console.error('[Prisma Schema Error]', err.message);
+      return error('Erro de schema do banco de dados', 500, {
+        message: err.message,
+        hint: 'Execute prisma db push para sincronizar o schema',
+      });
+    }
+
+    // Erro de conexao com banco
+    if (err.message.includes('connect') || 
+        err.message.includes('connection') ||
+        err.message.includes('ECONNREFUSED')) {
+      console.error('[Database Connection Error]', err.message);
+      return error('Erro de conexão com o banco de dados', 500, {
+        message: 'Não foi possível conectar ao banco de dados',
+      });
+    }
+
+    return error(err.message, 500, {
+      type: err.name,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+    });
   }
 
   return error('Erro interno do servidor', 500);
