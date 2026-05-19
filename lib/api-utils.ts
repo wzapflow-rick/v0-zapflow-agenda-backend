@@ -100,8 +100,8 @@ export async function auditLog(params: {
     await prisma.auditLog.create({
       data: {
         action: params.action,
-        entityType: params.entityType,
-        entityId: params.entityId,
+        resourceType: params.entityType,
+        resourceId: params.entityId,
         userId: params.userId || null,
         details: params.details || {},
       },
