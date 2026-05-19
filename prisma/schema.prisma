@@ -24,6 +24,7 @@ model User {
   subscription  Subscription?
   passwordResets PasswordReset[]
   notifications Notification[]
+  trialHistory  TrialHistory[]
 
   @@map("users")
 }
@@ -225,12 +226,17 @@ model Plan {
   // Trial em dias (0 = sem trial)
   trialDays       Int       @default(0)
   
+  // Configuracoes de trial por plano
+  trialEnabled    Boolean   @default(true) @map("trial_enabled")
+  trialDaysConfig Int       @default(7) @map("trial_days")
+  
   active          Boolean   @default(true)
   
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   subscriptions   Subscription[]
+  trialHistory    TrialHistory[]
 
   @@map("plans")
 }
@@ -250,6 +256,11 @@ model Subscription {
   endDate               DateTime?
   cancelledAt           DateTime?
   trialEndsAt           DateTime?          // Data fim do trial
+  
+  // Campos de trial
+  isTrial               Boolean            @default(false) @map("is_trial")
+  trialNotified3Days    Boolean            @default(false) @map("trial_notified_3_days")
+  trialNotified1Day     Boolean            @default(false) @map("trial_notified_1_day")
   
   // ID da assinatura no gateway de pagamento (Stripe, Mercado Pago, etc.)
   gatewaySubscriptionId String?
@@ -275,6 +286,38 @@ enum SubscriptionStatus {
   CANCELLED
   PAST_DUE
   TRIALING
+  TRIAL_EXPIRED
+}
+
+// Modelo de Historico de Trial
+model TrialHistory {
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+  planId          String    @map("plan_id")
+  startedAt       DateTime  @default(now()) @map("started_at")
+  endedAt         DateTime? @map("ended_at")
+  convertedToPaid Boolean   @default(false) @map("converted_to_paid")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan            Plan      @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, planId])
+  @@index([userId])
+  @@index([planId])
+  @@map("trial_history")
+}
+
+// Modelo de Configuracoes do App
+model AppSettings {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String?
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @map("updated_at")
+
+  @@map("app_settings")
 }
 
 // Modelo de Configuracoes de Mensagens Automaticas
