@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   try {
     const authResult = await authenticate(request)
     if (isAuthError(authResult)) return authResult
-    const { userId } = authResult
+    const userId = authResult.id
 
     // Buscar configuração global de trial
     const trialEnabledGlobal = await prisma.appSettings.findUnique({
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
   try {
     const authResult = await authenticate(request)
     if (isAuthError(authResult)) return authResult
-    const { userId } = authResult
+    const userId = authResult.id
 
     const body = await request.json()
     const { planId } = startTrialSchema.parse(body)
