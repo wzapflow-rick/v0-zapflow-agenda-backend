@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { verifyAdminSession } from "@/lib/admin-auth"
+import { getAdminFromCookies } from "@/lib/admin-auth"
 
 // GET /api/admin/trials - Listar todos os trials (ativos, expirados, histórico)
 export async function GET(request: NextRequest) {
   try {
-    const session = await verifyAdminSession(request)
-    if (!session.authenticated) {
+    const admin = await getAdminFromCookies()
+    if (!admin) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
 

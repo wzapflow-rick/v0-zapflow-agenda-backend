@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
-import { verifyAdminSession } from "@/lib/admin-auth"
+import { getAdminFromCookies } from "@/lib/admin-auth"
 
 const updateTrialSettingsSchema = z.object({
   trialEnabledGlobal: z.boolean().optional(),
@@ -11,10 +11,10 @@ const updateTrialSettingsSchema = z.object({
 })
 
 // GET /api/admin/settings/trial - Buscar configurações de trial
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const session = await verifyAdminSession(request)
-    if (!session.authenticated) {
+    const admin = await getAdminFromCookies()
+    if (!admin) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
 
@@ -84,8 +84,8 @@ export async function GET(request: NextRequest) {
 // PATCH /api/admin/settings/trial - Atualizar configurações de trial
 export async function PATCH(request: NextRequest) {
   try {
-    const session = await verifyAdminSession(request)
-    if (!session.authenticated) {
+    const admin = await getAdminFromCookies()
+    if (!admin) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
 

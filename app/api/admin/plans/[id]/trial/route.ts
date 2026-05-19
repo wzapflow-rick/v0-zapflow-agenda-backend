@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
-import { verifyAdminSession } from "@/lib/admin-auth"
+import { getAdminFromCookies } from "@/lib/admin-auth"
 
 const updatePlanTrialSchema = z.object({
   trialEnabled: z.boolean().optional(),
@@ -14,8 +14,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await verifyAdminSession(request)
-    if (!session.authenticated) {
+    const admin = await getAdminFromCookies()
+    if (!admin) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
 
@@ -79,8 +79,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await verifyAdminSession(request)
-    if (!session.authenticated) {
+    const admin = await getAdminFromCookies()
+    if (!admin) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
 
