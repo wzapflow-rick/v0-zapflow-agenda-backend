@@ -151,12 +151,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar se já existe trial para este plano
-    const existingTrialForPlan = await prisma.trialHistory.findUnique({
+    const existingTrialForPlan = await prisma.trialHistory.findFirst({
       where: {
-        userId_planId: {
-          userId,
-          planId,
-        },
+        userId,
+        planId,
       },
     })
 
