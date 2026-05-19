@@ -23,9 +23,13 @@ export async function GET(request: NextRequest) {
     });
 
     // Define limites baseado no plano
-    const isSubscriptionActive = subscription && 
-      subscription.status === 'ACTIVE' &&
+    const isTrialing = subscription?.status === 'TRIALING' &&
+      subscription.trialEndsAt && new Date(subscription.trialEndsAt) > new Date();
+    
+    const isActive = subscription?.status === 'ACTIVE' &&
       (!subscription.endDate || new Date(subscription.endDate) > new Date());
+    
+    const isSubscriptionActive = subscription && (isTrialing || isActive);
 
     const limits = isSubscriptionActive && subscription?.plan
       ? {
