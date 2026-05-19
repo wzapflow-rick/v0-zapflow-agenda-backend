@@ -85,29 +85,3 @@ export class ConflictError extends ApiError {
     super(message, 409);
   }
 }
-
-import { prisma } from './prisma';
-
-// Função para criar log de auditoria
-export async function auditLog(params: {
-  action: string;
-  entityType: string;
-  entityId: string;
-  userId?: string;
-  details?: Record<string, unknown>;
-}) {
-  try {
-    await prisma.auditLog.create({
-      data: {
-        action: params.action,
-        resourceType: params.entityType,
-        resourceId: params.entityId,
-        userId: params.userId || null,
-        details: params.details ? JSON.stringify(params.details) : null,
-      },
-    });
-  } catch (error) {
-    console.error('[auditLog] Erro ao criar log de auditoria:', error);
-    // Não propagar erro para não quebrar a operação principal
-  }
-}

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { auditLog } from "@/lib/api-utils"
 
 // Endpoint para verificar trials - deve ser chamado via cron job
 // GET /api/cron/trial-check?secret=zapagenda2024
@@ -207,19 +206,6 @@ export async function GET(request: NextRequest) {
             },
           })
         }
-
-        // Audit log
-        await auditLog({
-          action: "TRIAL_EXPIRED",
-          severity: "MEDIUM",
-          userId: subscription.userId,
-          resourceType: "subscription",
-          resourceId: subscription.id,
-          details: JSON.stringify({
-            planId: subscription.planId,
-            planName: subscription.plan.name,
-          }),
-        })
 
         console.log(`[Trial Expired] Usuário ${subscription.user.email} - Trial do plano ${subscription.plan.name} expirou`)
         
