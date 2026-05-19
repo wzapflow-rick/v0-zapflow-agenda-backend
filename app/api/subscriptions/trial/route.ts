@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { prisma } from "@/lib/prisma"
 import { authenticate, isAuthError } from "@/lib/auth"
-import { auditLog } from "@/lib/api-utils"
 
 const startTrialSchema = z.object({
   planId: z.string().min(1, "Plan ID é obrigatório"),
@@ -239,20 +238,6 @@ export async function POST(request: NextRequest) {
         userId,
         planId,
         startedAt: new Date(),
-      },
-    })
-
-    // Audit log
-    await auditLog({
-      action: "TRIAL_STARTED",
-      entityType: "subscription",
-      entityId: subscription.id,
-      userId,
-      details: {
-        planId,
-        planName: plan.name,
-        trialDays,
-        trialEndsAt,
       },
     })
 
