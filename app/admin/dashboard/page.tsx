@@ -113,7 +113,7 @@ export default function AdminDashboardPage() {
 
   const checkSession = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/session")
+      const res = await fetch("/api/admin/session", { credentials: "include" })
       const data = await res.json()
       if (!data.authenticated) {
         router.push("/admin")
@@ -129,7 +129,7 @@ export default function AdminDashboardPage() {
 
   const fetchMetrics = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/metrics")
+      const res = await fetch("/api/admin/metrics", { credentials: "include" })
       if (res.ok) {
         const data = await res.json()
         setMetrics(data)
@@ -145,7 +145,7 @@ export default function AdminDashboardPage() {
       if (selectedAuditAction) params.set("action", selectedAuditAction)
       if (selectedAuditEntity) params.set("entityType", selectedAuditEntity)
       
-      const res = await fetch(`/api/admin/audit-logs?${params}`)
+      const res = await fetch(`/api/admin/audit-logs?${params}`, { credentials: "include" })
       if (res.ok) {
         const data = await res.json()
         setAuditLogs(data.logs)
@@ -163,7 +163,7 @@ export default function AdminDashboardPage() {
       if (selectedMessageStatus) params.set("status", selectedMessageStatus)
       if (selectedMessageChannel) params.set("channel", selectedMessageChannel)
       
-      const res = await fetch(`/api/admin/message-logs?${params}`)
+      const res = await fetch(`/api/admin/message-logs?${params}`, { credentials: "include" })
       if (res.ok) {
         const data = await res.json()
         setMessageLogs(data.logs)
@@ -195,7 +195,7 @@ export default function AdminDashboardPage() {
   }, [activeTab, fetchAuditLogs, fetchMessageLogs])
 
   const handleLogout = async () => {
-    await fetch("/api/admin/logout", { method: "POST" })
+    await fetch("/api/admin/logout", { method: "POST", credentials: "include" })
     router.push("/admin")
   }
 
