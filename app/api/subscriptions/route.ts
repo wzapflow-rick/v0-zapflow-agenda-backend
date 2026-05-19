@@ -58,7 +58,14 @@ export async function POST(request: NextRequest) {
     if (isAuthError(authResult)) return authResult;
 
     const body = await request.json();
-    const data = createSubscriptionSchema.parse(body);
+    console.log("[v0] POST /api/subscriptions - Body recebido:", JSON.stringify(body));
+    
+    const parseResult = createSubscriptionSchema.safeParse(body);
+    if (!parseResult.success) {
+      console.log("[v0] Erro de validação Zod:", JSON.stringify(parseResult.error.errors));
+      throw parseResult.error;
+    }
+    const data = parseResult.data;
 
     // Busca plano
     const plan = await prisma.plan.findUnique({
