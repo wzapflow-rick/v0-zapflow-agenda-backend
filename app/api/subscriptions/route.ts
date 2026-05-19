@@ -132,3 +132,120 @@ export async function DELETE(request: NextRequest) {
     return handleError(error);
   }
 }
+
+const changeSubscriptionSchema = z.object({
+  planId: z.string().uuid(),
+});
+
+// PATCH /api/subscriptions - Alterar plano da assinatura
+export async function PATCH(request: NextRequest) {
+  try {
+    const authResult = await authenticate(request);
+    if (isAuthError(authResult)) return authResult;
+
+    const body = await request.json();
+    const data = changeSubscriptionSchema.parse(body);
+
+    // Busca assinatura atual
+    const subscription = await prisma.subscription.findUnique({
+      where: { userId: authResult.id },
+      include: { plan: true },
+    });
+
+    if (!subscription) {
+      throw new NotFoundError('Assinatura');
+    }
+
+    // Busca novo plano
+    const newPlan = await prisma.plan.findUnique({
+      where: { id: data.planId },
+    });
+
+    if (!newPlan || !newPlan.active) {
+      throw new NotFoundError('Plano');
+    }
+
+    // Se o plano é o mesmo, não faz nada
+    if (subscription.planId === data.planId) {
+      return success({
+        message: 'Você já está neste plano',
+        subscription,
+        plan: newPlan,
+      });
+    }
+
+    // Se está em trial, permite trocar de plano livremente
+    if (subscription.status === 'TRIALING') {
+      // Calcula novo trialEndsAt mantendo os dias restantes
+      const now = new Date();
+      const trialEndsAt = subscription.trialEndsAt;
+      
+      const updatedSubscription = await prisma.subscription.update({
+        where: { userId: authResult.id },
+        data: {
+          planId: data.planId,
+        },
+        include: { plan: true },
+      });
+
+      return success({
+        message: `Plano alterado para ${newPlan.name} com sucesso!`,
+        subscription: updatedSubscription,
+        plan: updatedSubscription.plan,
+      });
+    }
+
+    // Se está ativo (pagando), precisa criar nova preferência de pagamento
+    // para o upgrade/downgrade
+    if (subscription.status === 'ACTIVE') {
+      const user = await prisma.user.findUnique({
+        where: { id: authResult.id },
+      });
+
+      if (!user) {
+        throw new NotFoundError('Usuario');
+      }
+
+      // Cria preferência de pagamento para o novo plano
+      const preference = await createSubscriptionPreference({
+        planId: newPlan.id,
+        planName: newPlan.name,
+        planPrice: Number(newPlan.price),
+        userId: user.id,
+        userEmail: user.email,
+        userName: user.name,
+      });
+
+      return success({
+        message: 'Redirecionando para pagamento do novo plano',
+        requiresPayment: true,
+        preferenceId: preference.id,
+        initPoint: preference.init_point,
+        sandboxInitPoint: preference.sandbox_init_point,
+        newPlan: {
+          id: newPlan.id,
+          name: newPlan.name,
+          price: newPlan.price,
+        },
+      });
+    }
+
+    // Para outros status (CANCELLED, INACTIVE, etc.), 
+    // atualiza diretamente mas mantém o status
+    const updatedSubscription = await prisma.subscription.update({
+      where: { userId: authResult.id },
+      data: {
+        planId: data.planId,
+      },
+      include: { plan: true },
+    });
+
+    return success({
+      message: `Plano alterado para ${newPlan.name}`,
+      subscription: updatedSubscription,
+      plan: updatedSubscription.plan,
+    });
+  } catch (error) {
+    return handleError(error);
+  }
+}
