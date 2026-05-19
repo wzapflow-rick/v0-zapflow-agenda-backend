@@ -247,16 +247,15 @@ export async function POST(request: NextRequest) {
     // Audit log
     await auditLog({
       action: "TRIAL_STARTED",
-      severity: "MEDIUM",
+      entityType: "subscription",
+      entityId: subscription.id,
       userId,
-      resourceType: "subscription",
-      resourceId: subscription.id,
-      details: JSON.stringify({
+      details: {
         planId,
         planName: plan.name,
         trialDays,
         trialEndsAt,
-      }),
+      },
     })
 
     return NextResponse.json({
