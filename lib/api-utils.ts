@@ -103,7 +103,7 @@ export async function auditLog(params: {
         resourceType: params.entityType,
         resourceId: params.entityId,
         userId: params.userId || null,
-        details: params.details || {},
+        details: params.details ? JSON.stringify(params.details) : null,
       },
     });
   } catch (error) {
