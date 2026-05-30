@@ -72,6 +72,12 @@ export default function AdminTrialsPage() {
   const [trials, setTrials] = useState<Trial[]>([])
   const [trialsFilter, setTrialsFilter] = useState<"all" | "active" | "expired">("all")
   const [trialsPagination, setTrialsPagination] = useState({ page: 1, total: 0, totalPages: 0 })
+  
+  // Simulation state
+  const [simulatingTrial, setSimulatingTrial] = useState<string | null>(null)
+  const [simulateDays, setSimulateDays] = useState<number>(3)
+  const [runningCron, setRunningCron] = useState(false)
+  const [cronResult, setCronResult] = useState<{ expired: number; notified3Days: number; notified1Day: number } | null>(null)
 
   const checkSession = useCallback(async () => {
     try {
@@ -211,6 +217,55 @@ export default function AdminTrialsPage() {
   const handleLogout = async () => {
     await fetch("/api/admin/logout", { method: "POST", credentials: "include" })
     router.push("/admin")
+  }
+
+  const simulateTrial = async (trialId: string, daysRemaining: number) => {
+    try {
+      const res = await fetch(`/api/admin/trials/${trialId}/simulate`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ daysRemaining }),
+        credentials: "include",
+      })
+      const data = await res.json()
+      if (res.ok) {
+        alert(data.message)
+        setSimulatingTrial(null)
+        fetchTrials(trialsPagination.page)
+      } else {
+        alert(data.error || "Erro ao simular trial")
+      }
+    } catch (error) {
+      console.error("Error simulating trial:", error)
+      alert("Erro ao simular trial")
+    }
+  }
+
+  const runCronManually = async () => {
+    setRunningCron(true)
+    setCronResult(null)
+    try {
+      const res = await fetch("/api/admin/trials/run-cron", {
+        method: "POST",
+        credentials: "include",
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setCronResult({
+          expired: data.results.expired,
+          notified3Days: data.results.notified3Days,
+          notified1Day: data.results.notified1Day,
+        })
+        fetchTrials(trialsPagination.page)
+        fetchSettings()
+      } else {
+        alert(data.error || "Erro ao executar verificacao")
+      }
+    } catch (error) {
+      console.error("Error running cron:", error)
+      alert("Erro ao executar verificacao")
+    }
+    setRunningCron(false)
   }
 
   const formatDate = (dateStr: string | null) => {
@@ -507,6 +562,46 @@ export default function AdminTrialsPage() {
         {/* Trials List Tab */}
         {activeTab === "trials" && (
           <div className="space-y-4">
+            {/* Actions Bar */}
+            <div className="bg-slate-900 rounded-lg p-4 border border-slate-800">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h3 className="font-medium text-white">Ferramentas de Teste</h3>
+                  <p className="text-sm text-slate-400">Simule a passagem do tempo para testar notificacoes e expiracao</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={runCronManually}
+                    disabled={runningCron}
+                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 rounded-lg text-sm font-medium transition flex items-center gap-2"
+                  >
+                    {runningCron ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Executando...
+                      </>
+                    ) : (
+                      "Executar Verificacao de Trials"
+                    )}
+                  </button>
+                </div>
+              </div>
+              
+              {cronResult && (
+                <div className="mt-4 p-3 bg-slate-800 rounded-lg">
+                  <div className="text-sm font-medium text-emerald-400 mb-2">Resultado da Verificacao:</div>
+                  <div className="flex gap-6 text-sm">
+                    <span className="text-red-400">{cronResult.expired} expirado(s)</span>
+                    <span className="text-amber-400">{cronResult.notified3Days} notificado(s) 3 dias</span>
+                    <span className="text-yellow-400">{cronResult.notified1Day} notificado(s) 1 dia</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Filters */}
             <div className="flex gap-2">
               {[
@@ -533,18 +628,19 @@ export default function AdminTrialsPage() {
               <table className="w-full">
                 <thead className="bg-slate-800">
                   <tr>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">Usuário</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">Usuario</th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">Plano</th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">Status</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">Início</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">Inicio</th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">Expira</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">Notificações</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">Notificacoes</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">Acoes</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800">
                   {trials.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                      <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
                         Nenhum trial encontrado
                       </td>
                     </tr>
@@ -609,6 +705,48 @@ export default function AdminTrialsPage() {
                                 1d
                               </span>
                             </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            {simulatingTrial === trial.id ? (
+                              <div className="flex items-center gap-2">
+                                <select
+                                  value={simulateDays}
+                                  onChange={(e) => setSimulateDays(Number(e.target.value))}
+                                  className="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm"
+                                >
+                                  <option value={7}>7 dias</option>
+                                  <option value={5}>5 dias</option>
+                                  <option value={3}>3 dias</option>
+                                  <option value={2}>2 dias</option>
+                                  <option value={1}>1 dia</option>
+                                  <option value={0}>Expira agora</option>
+                                  <option value={-1}>Expirado ha 1 dia</option>
+                                  <option value={-3}>Expirado ha 3 dias</option>
+                                </select>
+                                <button
+                                  onClick={() => simulateTrial(trial.id, simulateDays)}
+                                  className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 rounded text-xs font-medium"
+                                >
+                                  OK
+                                </button>
+                                <button
+                                  onClick={() => setSimulatingTrial(null)}
+                                  className="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs font-medium"
+                                >
+                                  X
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setSimulatingTrial(trial.id)
+                                  setSimulateDays(daysRemaining || 3)
+                                }}
+                                className="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs font-medium transition"
+                              >
+                                Simular
+                              </button>
+                            )}
                           </td>
                         </tr>
                       )
