@@ -111,19 +111,29 @@ export async function GET(request: NextRequest) {
 // POST /api/subscriptions/trial - Iniciar trial
 export async function POST(request: NextRequest) {
   try {
+    console.log("[v0] POST /api/subscriptions/trial - Iniciando...")
+    
     const authResult = await authenticate(request)
-    if (isAuthError(authResult)) return authResult
+    if (isAuthError(authResult)) {
+      console.log("[v0] Erro de autenticação")
+      return authResult
+    }
     const userId = authResult.id
+    console.log("[v0] userId:", userId)
 
     const body = await request.json()
+    console.log("[v0] Body recebido:", JSON.stringify(body))
     const { planId } = startTrialSchema.parse(body)
+    console.log("[v0] planId validado:", planId)
 
     // Verificar se trial está habilitado globalmente
     const trialEnabledGlobal = await prisma.appSettings.findUnique({
       where: { key: "trial_enabled_global" },
     })
+    console.log("[v0] trialEnabledGlobal:", trialEnabledGlobal?.value)
     
     if (trialEnabledGlobal?.value !== "true") {
+      console.log("[v0] Trial desabilitado globalmente")
       return NextResponse.json(
         { error: "Trial está desabilitado no momento" },
         { status: 400 }
@@ -134,6 +144,7 @@ export async function POST(request: NextRequest) {
     const plan = await prisma.plan.findUnique({
       where: { id: planId },
     })
+    console.log("[v0] Plano encontrado:", plan?.name, "trialEnabled:", plan?.trialEnabled)
 
     if (!plan || !plan.active) {
       return NextResponse.json(
@@ -156,8 +167,10 @@ export async function POST(request: NextRequest) {
         planId,
       },
     })
+    console.log("[v0] existingTrialForPlan:", existingTrialForPlan)
 
     if (existingTrialForPlan) {
+      console.log("[v0] BLOQUEADO: Já existe trial para este plano")
       return NextResponse.json(
         { error: "Você já utilizou o trial para este plano" },
         { status: 400 }
@@ -168,8 +181,10 @@ export async function POST(request: NextRequest) {
     const anyExistingTrial = await prisma.trialHistory.findFirst({
       where: { userId },
     })
+    console.log("[v0] anyExistingTrial:", anyExistingTrial)
 
     if (anyExistingTrial) {
+      console.log("[v0] Usuário já fez trial antes, verificando se pagou...")
       // Verificar se já pagou algum plano
       const hasPaidBefore = await prisma.subscription.findFirst({
         where: {
@@ -178,8 +193,10 @@ export async function POST(request: NextRequest) {
           isTrial: false,
         },
       })
+      console.log("[v0] hasPaidBefore:", hasPaidBefore)
 
       if (!hasPaidBefore) {
+        console.log("[v0] BLOQUEADO: Já fez trial e nunca pagou")
         return NextResponse.json(
           { error: "Você já utilizou seu trial gratuito. Assine um plano para continuar." },
           { status: 400 }
@@ -209,9 +226,12 @@ export async function POST(request: NextRequest) {
     // Calcular data de fim do trial
     const trialEndsAt = new Date()
     trialEndsAt.setDate(trialEndsAt.getDate() + trialDays)
+    console.log("[v0] trialDays:", trialDays, "trialEndsAt:", trialEndsAt)
 
     // Usar transação para garantir atomicidade
+    console.log("[v0] Iniciando transação para criar subscription e trial_history...")
     const result = await prisma.$transaction(async (tx) => {
+      console.log("[v0] Dentro da transação - criando/atualizando subscription...")
       // Criar ou atualizar assinatura em trial
       const subscription = await tx.subscription.upsert({
         where: { userId },
@@ -233,8 +253,10 @@ export async function POST(request: NextRequest) {
           trialEndsAt,
         },
       })
+      console.log("[v0] Subscription criada/atualizada:", subscription.id, subscription.status)
 
       // Registrar no histórico de trials
+      console.log("[v0] Criando trial_history...")
       await tx.trialHistory.create({
         data: {
           userId,
@@ -242,9 +264,11 @@ export async function POST(request: NextRequest) {
           startedAt: new Date(),
         },
       })
+      console.log("[v0] trial_history criado com sucesso!")
 
       return subscription
     })
+    console.log("[v0] Transação completada com sucesso!")
 
     return NextResponse.json({
       success: true,
