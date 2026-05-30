@@ -59,9 +59,13 @@ export async function GET(request: NextRequest) {
     });
 
     // Verifica se tem assinatura ativa ou em trial
-    const isSubscriptionActive = subscription && 
-      (subscription.status === 'ACTIVE' || subscription.status === 'TRIALING') &&
+    const isTrialing = subscription?.status === 'TRIALING' && 
+      subscription.trialEndsAt && new Date(subscription.trialEndsAt) > new Date();
+    
+    const isActive = subscription?.status === 'ACTIVE' &&
       (!subscription.endDate || new Date(subscription.endDate) > new Date());
+    
+    const isSubscriptionActive = subscription && (isTrialing || isActive);
 
     if (!isSubscriptionActive || !subscription?.plan) {
       // Usuario sem assinatura - nao pode usar o sistema
@@ -99,9 +103,9 @@ export async function GET(request: NextRequest) {
 
     // Calcula dias restantes do trial se aplicavel
     let trialDaysRemaining = 0;
-    if (subscription.status === 'TRIALING' && subscription.endDate) {
+    if (subscription.status === 'TRIALING' && subscription.trialEndsAt) {
       const now = new Date();
-      const end = new Date(subscription.endDate);
+      const end = new Date(subscription.trialEndsAt);
       trialDaysRemaining = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
     }
 
@@ -112,7 +116,17 @@ export async function GET(request: NextRequest) {
       isActive: true,
       hasSubscription: true,
       isTrial: subscription.status === 'TRIALING',
+      trialEndsAt: subscription.trialEndsAt,
       trialDaysRemaining,
+      plan: {
+        id: subscription.plan.id,
+        name: subscription.plan.name,
+        description: subscription.plan.description,
+        price: subscription.plan.price,
+        maxProfessionals: subscription.plan.maxProfessionals,
+        maxServices: subscription.plan.maxServices,
+        maxAppointments: subscription.plan.maxAppointments,
+      },
       limits: {
         maxProfessionals: subscription.plan.maxProfessionals,
         maxServices: subscription.plan.maxServices,
@@ -124,6 +138,7 @@ export async function GET(request: NextRequest) {
         status: subscription.status,
         startDate: subscription.startDate,
         endDate: subscription.endDate,
+        trialEndsAt: subscription.trialEndsAt,
       },
     });
   } catch (error) {
