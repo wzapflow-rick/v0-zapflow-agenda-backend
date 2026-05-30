@@ -210,45 +210,50 @@ export async function POST(request: NextRequest) {
     const trialEndsAt = new Date()
     trialEndsAt.setDate(trialEndsAt.getDate() + trialDays)
 
-    // Criar ou atualizar assinatura em trial
-    const subscription = await prisma.subscription.upsert({
-      where: { userId },
-      update: {
-        planId,
-        status: "TRIALING",
-        isTrial: true,
-        startDate: new Date(),
-        trialEndsAt,
-        trialNotified3Days: false,
-        trialNotified1Day: false,
-      },
-      create: {
-        userId,
-        planId,
-        status: "TRIALING",
-        isTrial: true,
-        startDate: new Date(),
-        trialEndsAt,
-      },
-    })
+    // Usar transação para garantir atomicidade
+    const result = await prisma.$transaction(async (tx) => {
+      // Criar ou atualizar assinatura em trial
+      const subscription = await tx.subscription.upsert({
+        where: { userId },
+        update: {
+          planId,
+          status: "TRIALING",
+          isTrial: true,
+          startDate: new Date(),
+          trialEndsAt,
+          trialNotified3Days: false,
+          trialNotified1Day: false,
+        },
+        create: {
+          userId,
+          planId,
+          status: "TRIALING",
+          isTrial: true,
+          startDate: new Date(),
+          trialEndsAt,
+        },
+      })
 
-    // Registrar no histórico de trials
-    await prisma.trialHistory.create({
-      data: {
-        userId,
-        planId,
-        startedAt: new Date(),
-      },
+      // Registrar no histórico de trials
+      await tx.trialHistory.create({
+        data: {
+          userId,
+          planId,
+          startedAt: new Date(),
+        },
+      })
+
+      return subscription
     })
 
     return NextResponse.json({
       success: true,
       message: `Trial de ${trialDays} dias iniciado com sucesso!`,
       subscription: {
-        id: subscription.id,
-        status: subscription.status,
-        planId: subscription.planId,
-        trialEndsAt: subscription.trialEndsAt,
+        id: result.id,
+        status: result.status,
+        planId: result.planId,
+        trialEndsAt: result.trialEndsAt,
       },
       plan: {
         id: plan.id,
