@@ -4,6 +4,12 @@ import { success, handleError, NotFoundError, ApiError } from '@/lib/api-utils';
 import { publicBookingSchema } from '@/lib/validators';
 import { sendAutomaticMessage } from '@/lib/whatsapp';
 import { notifyAppointmentCreated, notifyClientCreated } from '@/lib/notifications';
+import { createAppointmentSafe } from '@/lib/booking-lock';
+import { 
+  generateBookingIdempotencyKey, 
+  checkBookingIdempotency, 
+  saveBookingIdempotency 
+} from '@/lib/idempotency';
 
 // POST /api/public/[slug]/book - Criar agendamento público
 export async function POST(
@@ -23,6 +29,19 @@ export async function POST(
 
     const body = await request.json();
     const data = publicBookingSchema.parse(body);
+
+    // Verificar idempotencia (protege contra double-click)
+    const idempotencyKey = generateBookingIdempotencyKey(
+      establishment.id,
+      data.clientPhone,
+      data.date,
+      data.startTime
+    );
+    
+    const cachedResult = await checkBookingIdempotency(idempotencyKey);
+    if (cachedResult) {
+      return success(cachedResult, 201);
+    }
 
     // Verifica se profissional existe e pertence ao estabelecimento
     const professional = await prisma.professional.findUnique({
@@ -70,66 +89,32 @@ export async function POST(
     const endDate = new Date(startDate.getTime() + service.duration * 60000);
     const endTime = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`;
 
-    // Verifica conflitos de horário
-    const conflictingAppointment = await prisma.appointment.findFirst({
-      where: {
-        professionalId: data.professionalId,
-        date: new Date(data.date),
-        status: { notIn: ['CANCELLED'] },
-        OR: [
-          {
-            AND: [
-              { startTime: { lte: new Date(`1970-01-01T${data.startTime}:00`) } },
-              { endTime: { gt: new Date(`1970-01-01T${data.startTime}:00`) } },
-            ],
-          },
-          {
-            AND: [
-              { startTime: { lt: new Date(`1970-01-01T${endTime}:00`) } },
-              { endTime: { gte: new Date(`1970-01-01T${endTime}:00`) } },
-            ],
-          },
-          {
-            AND: [
-              { startTime: { gte: new Date(`1970-01-01T${data.startTime}:00`) } },
-              { endTime: { lte: new Date(`1970-01-01T${endTime}:00`) } },
-            ],
-          },
-        ],
-      },
+    // Criar agendamento com proteção contra dupla reserva
+    const result = await createAppointmentSafe(prisma, {
+      date: data.date,
+      startTime: data.startTime,
+      endTime,
+      price: Number(service.price),
+      notes: data.notes,
+      establishmentId: establishment.id,
+      professionalId: data.professionalId,
+      serviceId: data.serviceId,
+      clientId: client.id,
     });
 
-    if (conflictingAppointment) {
-      throw new ApiError('Horário não disponível - conflito com outro agendamento', 409);
+    if (!result.success) {
+      throw new ApiError(result.error, 409);
     }
 
-    const appointment = await prisma.appointment.create({
-      data: {
-        date: new Date(data.date),
-        startTime: new Date(`1970-01-01T${data.startTime}:00`),
-        endTime: new Date(`1970-01-01T${endTime}:00`),
-        price: service.price,
-        notes: data.notes,
-        establishmentId: establishment.id,
-        professionalId: data.professionalId,
-        serviceId: data.serviceId,
-        clientId: client.id,
-      },
-      include: {
-        professional: {
-          select: {
-            name: true,
-          },
-        },
-        service: {
-          select: {
-            name: true,
-            duration: true,
-            price: true,
-          },
-        },
-      },
-    });
+    const appointment = result.appointment as {
+      id: string;
+      date: Date;
+      startTime: Date;
+      endTime: Date;
+      status: string;
+      professional: { name: string };
+      service: { name: string; duration: number; price: number };
+    };
 
     // Formata a data para exibicao
     const dateFormatted = new Date(data.date).toLocaleDateString('pt-BR');
@@ -183,7 +168,8 @@ export async function POST(
       console.error('[WhatsApp] Erro ao enviar mensagem de confirmacao:', error);
     });
 
-    return success({
+    // Preparar resposta
+    const responseData = {
       appointment: {
         id: appointment.id,
         date: appointment.date,
@@ -196,7 +182,12 @@ export async function POST(
         price: appointment.service.price,
       },
       message: 'Agendamento realizado com sucesso!',
-    }, 201);
+    };
+
+    // Salvar idempotencia para requests futuros
+    await saveBookingIdempotency(idempotencyKey, responseData);
+
+    return success(responseData, 201);
   } catch (error) {
     return handleError(error);
   }

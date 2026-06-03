@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import { authenticate, isAuthError } from '@/lib/auth';
 import { success, handleError, NotFoundError, ApiError } from '@/lib/api-utils';
 import { createAppointmentSchema } from '@/lib/validators';
+import { createAppointmentSafe } from '@/lib/booking-lock';
 
 // GET /api/appointments - Listar agendamentos
 export async function GET(request: NextRequest) {
@@ -111,59 +112,24 @@ export async function POST(request: NextRequest) {
     const endDate = new Date(startDate.getTime() + service.duration * 60000);
     const endTime = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`;
 
-    // Verifica conflitos de horário
-    const conflictingAppointment = await prisma.appointment.findFirst({
-      where: {
-        professionalId: data.professionalId,
-        date: new Date(data.date),
-        status: { notIn: ['CANCELLED'] },
-        OR: [
-          {
-            AND: [
-              { startTime: { lte: new Date(`1970-01-01T${data.startTime}:00`) } },
-              { endTime: { gt: new Date(`1970-01-01T${data.startTime}:00`) } },
-            ],
-          },
-          {
-            AND: [
-              { startTime: { lt: new Date(`1970-01-01T${endTime}:00`) } },
-              { endTime: { gte: new Date(`1970-01-01T${endTime}:00`) } },
-            ],
-          },
-          {
-            AND: [
-              { startTime: { gte: new Date(`1970-01-01T${data.startTime}:00`) } },
-              { endTime: { lte: new Date(`1970-01-01T${endTime}:00`) } },
-            ],
-          },
-        ],
-      },
+    // Criar agendamento com proteção contra dupla reserva
+    const result = await createAppointmentSafe(prisma, {
+      date: data.date,
+      startTime: data.startTime,
+      endTime,
+      price: Number(service.price),
+      notes: data.notes,
+      establishmentId: authResult.establishmentId,
+      professionalId: data.professionalId,
+      serviceId: data.serviceId,
+      clientId: data.clientId,
     });
 
-    if (conflictingAppointment) {
-      throw new ApiError('Horário não disponível - conflito com outro agendamento', 409);
+    if (!result.success) {
+      throw new ApiError(result.error, 409);
     }
 
-    const appointment = await prisma.appointment.create({
-      data: {
-        date: new Date(data.date),
-        startTime: new Date(`1970-01-01T${data.startTime}:00`),
-        endTime: new Date(`1970-01-01T${endTime}:00`),
-        price: service.price,
-        notes: data.notes,
-        establishmentId: authResult.establishmentId,
-        professionalId: data.professionalId,
-        serviceId: data.serviceId,
-        clientId: data.clientId,
-      },
-      include: {
-        client: true,
-        professional: true,
-        service: true,
-      },
-    });
-
-    return success(appointment, 201);
+    return success(result.appointment, 201);
   } catch (error) {
     return handleError(error);
   }

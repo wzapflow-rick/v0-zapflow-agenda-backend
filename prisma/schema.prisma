@@ -103,6 +103,7 @@ model Professional {
   appointments    Appointment[]
   services        ProfessionalService[]
 
+  @@index([establishmentId])
   @@map("professionals")
 }
 
@@ -125,6 +126,7 @@ model Service {
   appointments    Appointment[]
   professionals   ProfessionalService[]
 
+  @@index([establishmentId])
   @@map("services")
 }
 
@@ -160,6 +162,8 @@ model Client {
   messageLogs     MessageLog[]
 
   @@unique([phone, establishmentId])
+  @@index([establishmentId])
+  @@index([phone])
   @@map("clients")
 }
 
@@ -195,6 +199,10 @@ model Appointment {
 
   @@index([establishmentId, date])
   @@index([professionalId, date])
+  @@index([clientId])
+  @@index([status])
+  @@index([professionalId, date, status, startTime, endTime], name: "idx_appointments_slots_query")
+  @@index([createdAt(sort: Desc)])
   @@map("appointments")
 }
 
@@ -276,6 +284,8 @@ model Subscription {
   planId                String
   plan                  Plan               @relation(fields: [planId], references: [id])
 
+  @@index([status])
+  @@index([trialEndsAt])
   @@map("subscriptions")
 }
 
@@ -433,4 +443,29 @@ model LoginAttempt {
   @@index([email, createdAt])
   @@index([ipAddress, createdAt])
   @@map("login_attempts")
+}
+
+// Modelo para idempotencia de pagamentos
+model IdempotencyKey {
+  key       String   @id
+  response  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("idempotency_keys")
+}
+
+// Modelo para eventos de webhook
+model WebhookEvent {
+  id          String    @id @default(uuid())
+  eventId     String    @unique @map("event_id")
+  eventType   String    @map("event_type")
+  payload     Json
+  status      String    @default("RECEIVED")
+  processedAt DateTime? @map("processed_at")
+  error       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([status, createdAt])
+  @@map("webhook_events")
 }
