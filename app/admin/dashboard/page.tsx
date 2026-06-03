@@ -21,7 +21,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
-  Gift
+  Gift,
+  Activity,
+  Zap,
+  Database,
+  Shield,
+  Gauge
 } from "lucide-react"
 
 interface Metrics {
@@ -51,6 +56,34 @@ interface Metrics {
   audit: {
     totalLogs: number
   }
+  redis?: {
+    cache: {
+      hits: number
+      misses: number
+      stale: number
+      hitRatio: number
+    }
+    performance: {
+      avgQueryTimeMs: number
+      minQueryTimeMs: number
+      maxQueryTimeMs: number
+      totalQueries: number
+    }
+    whatsapp: {
+      sent: number
+      failed: number
+      successRate: number
+    }
+    rateLimit: {
+      exceeded: number
+    }
+    errors: {
+      booking: number
+      whatsapp: number
+      webhook: number
+      auth: number
+    }
+  } | null
   timestamp: string
 }
 
@@ -93,7 +126,7 @@ interface PaginationData {
   totalPages: number
 }
 
-type TabType = "overview" | "audit" | "messages"
+type TabType = "overview" | "performance" | "audit" | "messages"
 
 export default function AdminDashboardPage() {
   const router = useRouter()
@@ -303,7 +336,8 @@ export default function AdminDashboardPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="flex gap-1 overflow-x-auto">
             {[
-              { id: "overview" as TabType, label: "Visão Geral", icon: TrendingUp },
+              { id: "overview" as TabType, label: "Visao Geral", icon: TrendingUp },
+              { id: "performance" as TabType, label: "Performance", icon: Activity },
               { id: "audit" as TabType, label: "Logs de Auditoria", icon: FileText },
               { id: "messages" as TabType, label: "Logs de Mensagens", icon: MessageSquare }
             ].map((tab) => (
@@ -426,8 +460,147 @@ export default function AdminDashboardPage() {
 
             {/* Last Update */}
             <p className="text-center text-sm text-slate-500">
-              Última atualização: {formatDate(metrics.timestamp)}
+              Ultima atualizacao: {formatDate(metrics.timestamp)}
             </p>
+          </div>
+        )}
+
+        {/* Performance Tab */}
+        {activeTab === "performance" && metrics && (
+          <div className="space-y-6">
+            {/* Redis Status */}
+            {metrics.redis ? (
+              <>
+                {/* Cache Performance */}
+                <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                    <Database className="w-5 h-5 text-cyan-400" />
+                    Cache de Slots (Redis)
+                  </h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="text-center p-4 bg-slate-700/30 rounded-lg">
+                      <p className="text-3xl font-bold text-emerald-400">{metrics.redis.cache.hits}</p>
+                      <p className="text-sm text-slate-400 mt-1">Cache Hits</p>
+                    </div>
+                    <div className="text-center p-4 bg-slate-700/30 rounded-lg">
+                      <p className="text-3xl font-bold text-red-400">{metrics.redis.cache.misses}</p>
+                      <p className="text-sm text-slate-400 mt-1">Cache Misses</p>
+                    </div>
+                    <div className="text-center p-4 bg-slate-700/30 rounded-lg">
+                      <p className="text-3xl font-bold text-amber-400">{metrics.redis.cache.stale}</p>
+                      <p className="text-sm text-slate-400 mt-1">Stale Served</p>
+                    </div>
+                    <div className="text-center p-4 bg-slate-700/30 rounded-lg">
+                      <p className="text-3xl font-bold text-cyan-400">{metrics.redis.cache.hitRatio}%</p>
+                      <p className="text-sm text-slate-400 mt-1">Hit Ratio</p>
+                    </div>
+                  </div>
+                  {/* Cache Hit Ratio Bar */}
+                  <div className="mt-4">
+                    <div className="flex justify-between text-sm text-slate-400 mb-1">
+                      <span>Taxa de acerto do cache</span>
+                      <span>{metrics.redis.cache.hitRatio}%</span>
+                    </div>
+                    <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full transition-all"
+                        style={{ width: `${Math.min(metrics.redis.cache.hitRatio, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Query Performance */}
+                <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                    <Gauge className="w-5 h-5 text-purple-400" />
+                    Performance de Queries
+                  </h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="text-center p-4 bg-slate-700/30 rounded-lg">
+                      <p className="text-3xl font-bold text-purple-400">{metrics.redis.performance.avgQueryTimeMs}ms</p>
+                      <p className="text-sm text-slate-400 mt-1">Tempo Medio</p>
+                    </div>
+                    <div className="text-center p-4 bg-slate-700/30 rounded-lg">
+                      <p className="text-3xl font-bold text-emerald-400">{metrics.redis.performance.minQueryTimeMs}ms</p>
+                      <p className="text-sm text-slate-400 mt-1">Mais Rapida</p>
+                    </div>
+                    <div className="text-center p-4 bg-slate-700/30 rounded-lg">
+                      <p className="text-3xl font-bold text-amber-400">{metrics.redis.performance.maxQueryTimeMs}ms</p>
+                      <p className="text-sm text-slate-400 mt-1">Mais Lenta</p>
+                    </div>
+                    <div className="text-center p-4 bg-slate-700/30 rounded-lg">
+                      <p className="text-3xl font-bold text-blue-400">{metrics.redis.performance.totalQueries}</p>
+                      <p className="text-sm text-slate-400 mt-1">Total Queries</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* WhatsApp & Rate Limit */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* WhatsApp Stats */}
+                  <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
+                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                      <Zap className="w-5 h-5 text-green-400" />
+                      WhatsApp
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between py-3 px-4 bg-slate-700/20 rounded-lg">
+                        <span className="text-slate-300">Mensagens Enviadas</span>
+                        <span className="text-2xl font-bold text-emerald-400">{metrics.redis.whatsapp.sent}</span>
+                      </div>
+                      <div className="flex items-center justify-between py-3 px-4 bg-slate-700/20 rounded-lg">
+                        <span className="text-slate-300">Falhas</span>
+                        <span className="text-2xl font-bold text-red-400">{metrics.redis.whatsapp.failed}</span>
+                      </div>
+                      <div className="flex items-center justify-between py-3 px-4 bg-slate-700/20 rounded-lg">
+                        <span className="text-slate-300">Taxa de Sucesso</span>
+                        <span className="text-2xl font-bold text-cyan-400">{metrics.redis.whatsapp.successRate}%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Rate Limit & Errors */}
+                  <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
+                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                      <Shield className="w-5 h-5 text-amber-400" />
+                      Seguranca e Erros
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between py-3 px-4 bg-slate-700/20 rounded-lg">
+                        <span className="text-slate-300">Rate Limits Excedidos</span>
+                        <span className="text-2xl font-bold text-amber-400">{metrics.redis.rateLimit.exceeded}</span>
+                      </div>
+                      <div className="flex items-center justify-between py-3 px-4 bg-slate-700/20 rounded-lg">
+                        <span className="text-slate-300">Erros de Booking</span>
+                        <span className="text-2xl font-bold text-red-400">{metrics.redis.errors.booking}</span>
+                      </div>
+                      <div className="flex items-center justify-between py-3 px-4 bg-slate-700/20 rounded-lg">
+                        <span className="text-slate-300">Erros de Webhook</span>
+                        <span className="text-2xl font-bold text-red-400">{metrics.redis.errors.webhook}</span>
+                      </div>
+                      <div className="flex items-center justify-between py-3 px-4 bg-slate-700/20 rounded-lg">
+                        <span className="text-slate-300">Erros de Auth</span>
+                        <span className="text-2xl font-bold text-red-400">{metrics.redis.errors.auth}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Last Update */}
+                <p className="text-center text-sm text-slate-500">
+                  Metricas das ultimas 24 horas - Atualizado: {formatDate(metrics.timestamp)}
+                </p>
+              </>
+            ) : (
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-12 text-center">
+                <Database className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-slate-400 mb-2">Redis nao conectado</h3>
+                <p className="text-sm text-slate-500">
+                  As metricas de performance requerem que o Upstash Redis esteja configurado.
+                </p>
+              </div>
+            )}
           </div>
         )}
 
