@@ -9,6 +9,7 @@
  */
 
 import { PrismaClient, Prisma } from '@prisma/client'
+import { invalidateSlotsCache } from './redis'
 
 // Gera hash numérico para usar como chave do advisory lock
 function hashToNumber(str: string): bigint {
@@ -179,6 +180,11 @@ export async function createAppointmentSafe(
         })
       }
     )
+    
+    // Invalida cache de slots (nao bloqueia)
+    invalidateSlotsCache(data.establishmentId, data.professionalId, data.date).catch((err) => {
+      console.error('[Cache] Erro ao invalidar cache apos criar agendamento:', err)
+    })
     
     return { success: true, appointment }
   } catch (error) {

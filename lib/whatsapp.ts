@@ -1,4 +1,5 @@
 import prisma from './prisma';
+import { trackMetric } from './metrics';
 
 const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL;
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY;
@@ -452,6 +453,14 @@ export async function sendAutomaticMessage(
   );
 
   console.log('[WhatsApp] Resultado:', result.success ? 'enviado' : 'falhou', result.error || '');
+
+  // Registra metricas
+  if (result.success) {
+    await trackMetric('whatsapp_sent');
+  } else {
+    await trackMetric('whatsapp_failed');
+    await trackMetric('error_whatsapp');
+  }
 
   // Registra no log
   await logMessage({

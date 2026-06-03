@@ -10,6 +10,8 @@ import {
   checkBookingIdempotency, 
   saveBookingIdempotency 
 } from '@/lib/idempotency';
+import { checkRateLimit, getClientIP, rateLimitResponse } from '@/lib/rate-limit-redis';
+import { trackMetric } from '@/lib/metrics';
 
 // POST /api/public/[slug]/book - Criar agendamento público
 export async function POST(
@@ -17,6 +19,14 @@ export async function POST(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
+    // Rate limit por IP
+    const clientIP = getClientIP(request);
+    const rateLimit = await checkRateLimit('booking', clientIP);
+    if (!rateLimit.success) {
+      await trackMetric('rate_limit_exceeded');
+      return rateLimitResponse(rateLimit.reset);
+    }
+
     const { slug } = await params;
 
     const establishment = await prisma.establishment.findUnique({
@@ -187,8 +197,13 @@ export async function POST(
     // Salvar idempotencia para requests futuros
     await saveBookingIdempotency(idempotencyKey, responseData);
 
+    // Registrar metrica de booking completado
+    await trackMetric('booking_completed');
+    await trackMetric('appointment_created');
+
     return success(responseData, 201);
   } catch (error) {
+    await trackMetric('error_booking');
     return handleError(error);
   }
 }
