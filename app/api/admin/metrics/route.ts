@@ -26,16 +26,16 @@ export async function GET() {
     const [
       totalUsers,
       totalEstablishments,
-      totalBookings,
+      totalAppointments,
       totalServices,
       totalProfessionals,
       activeSubscriptions,
-      todayBookings,
-      weekBookings,
-      monthBookings,
+      todayAppointments,
+      weekAppointments,
+      monthAppointments,
       totalMessagesSent,
       messagesByStatus,
-      bookingsByStatus,
+      appointmentsByStatus,
       recentAuditLogs,
       recentUsers,
       subscriptionsByPlan
@@ -43,22 +43,22 @@ export async function GET() {
       // Total counts
       prisma.user.count(),
       prisma.establishment.count(),
-      prisma.booking.count(),
+      prisma.appointment.count(),
       prisma.service.count(),
       prisma.professional.count(),
       prisma.subscription.count({
-        where: { status: 'active' }
+        where: { status: 'ACTIVE' }
       }),
       
-      // Time-based bookings
-      prisma.booking.count({
-        where: { dateTime: { gte: startOfToday } }
+      // Time-based appointments
+      prisma.appointment.count({
+        where: { date: { gte: startOfToday } }
       }),
-      prisma.booking.count({
-        where: { dateTime: { gte: startOfWeek } }
+      prisma.appointment.count({
+        where: { date: { gte: startOfWeek } }
       }),
-      prisma.booking.count({
-        where: { dateTime: { gte: startOfMonth } }
+      prisma.appointment.count({
+        where: { date: { gte: startOfMonth } }
       }),
 
       // Messages
@@ -68,8 +68,8 @@ export async function GET() {
         _count: { status: true }
       }),
 
-      // Bookings by status
-      prisma.booking.groupBy({
+      // Appointments by status
+      prisma.appointment.groupBy({
         by: ['status'],
         _count: { status: true }
       }),
@@ -89,7 +89,7 @@ export async function GET() {
       // Subscriptions by plan
       prisma.subscription.groupBy({
         by: ['planId'],
-        where: { status: 'active' },
+        where: { status: 'ACTIVE' },
         _count: { planId: true }
       })
     ])
@@ -159,17 +159,17 @@ export async function GET() {
       overview: {
         totalUsers,
         totalEstablishments,
-        totalBookings,
+        totalAppointments,
         totalServices,
         totalProfessionals,
         activeSubscriptions,
         newUsersLast30Days: recentUsers
       },
-      bookings: {
-        today: todayBookings,
-        thisWeek: weekBookings,
-        thisMonth: monthBookings,
-        byStatus: bookingsByStatus.map(b => ({
+      appointments: {
+        today: todayAppointments,
+        thisWeek: weekAppointments,
+        thisMonth: monthAppointments,
+        byStatus: appointmentsByStatus.map(b => ({
           status: b.status,
           count: b._count.status
         }))
