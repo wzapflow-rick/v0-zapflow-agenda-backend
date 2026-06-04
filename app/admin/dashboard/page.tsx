@@ -33,13 +33,13 @@ interface Metrics {
   overview: {
     totalUsers: number
     totalEstablishments: number
-    totalBookings: number
+    totalAppointments: number
     totalServices: number
     totalProfessionals: number
     activeSubscriptions: number
     newUsersLast30Days: number
   }
-  bookings: {
+  appointments: {
     today: number
     thisWeek: number
     thisMonth: number
@@ -367,7 +367,7 @@ export default function AdminDashboardPage() {
               {[
                 { label: "Usuários", value: metrics.overview.totalUsers, icon: Users, color: "text-blue-400" },
                 { label: "Estabelecimentos", value: metrics.overview.totalEstablishments, icon: Building2, color: "text-purple-400" },
-                { label: "Agendamentos", value: metrics.overview.totalBookings, icon: Calendar, color: "text-emerald-400" },
+                { label: "Agendamentos", value: metrics.overview.totalAppointments, icon: Calendar, color: "text-emerald-400" },
                 { label: "Serviços", value: metrics.overview.totalServices, icon: Briefcase, color: "text-orange-400" },
                 { label: "Profissionais", value: metrics.overview.totalProfessionals, icon: UserCheck, color: "text-pink-400" },
                 { label: "Assinaturas Ativas", value: metrics.overview.activeSubscriptions, icon: CreditCard, color: "text-yellow-400" },
@@ -398,21 +398,21 @@ export default function AdminDashboardPage() {
                 </h3>
                 <div className="grid grid-cols-3 gap-4 mb-6">
                   <div className="text-center p-3 bg-slate-700/30 rounded-lg">
-                    <p className="text-2xl font-bold text-white">{metrics.bookings.today}</p>
+                    <p className="text-2xl font-bold text-white">{metrics.appointments.today}</p>
                     <p className="text-xs text-slate-400">Hoje</p>
                   </div>
                   <div className="text-center p-3 bg-slate-700/30 rounded-lg">
-                    <p className="text-2xl font-bold text-white">{metrics.bookings.thisWeek}</p>
+                    <p className="text-2xl font-bold text-white">{metrics.appointments.thisWeek}</p>
                     <p className="text-xs text-slate-400">Esta Semana</p>
                   </div>
                   <div className="text-center p-3 bg-slate-700/30 rounded-lg">
-                    <p className="text-2xl font-bold text-white">{metrics.bookings.thisMonth}</p>
-                    <p className="text-xs text-slate-400">Este Mês</p>
+                    <p className="text-2xl font-bold text-white">{metrics.appointments.thisMonth}</p>
+                    <p className="text-xs text-slate-400">Este Mes</p>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <p className="text-sm text-slate-400 mb-2">Por Status:</p>
-                  {metrics.bookings.byStatus.map((item) => (
+                  {metrics.appointments.byStatus.map((item) => (
                     <div key={item.status} className="flex items-center justify-between py-2 px-3 bg-slate-700/20 rounded-lg">
                       <span className="text-sm text-slate-300 capitalize">{item.status}</span>
                       <span className={`text-sm font-medium px-2 py-1 rounded ${getStatusColor(item.status)}`}>
