@@ -68,23 +68,35 @@ export function generateBookingIdempotencyKey(
 /**
  * Verifica idempotência de booking (sem persistir)
  * Usa a constraint única do banco como proteção
- * 
+ *
+ * FAIL-OPEN: se a tabela idempotency_keys nao existir ou o banco
+ * falhar, retorna null (continua o fluxo normal). A constraint unica
+ * e o advisory lock ainda protegem contra dupla reserva.
+ *
  * @param key - Chave de idempotência
  * @returns Resultado cached ou null
  */
 export async function checkBookingIdempotency(
   key: string
 ): Promise<object | null> {
-  const existing = await prisma.idempotencyKey.findUnique({
-    where: { key },
-  })
-  
-  return existing?.response as object | null
+  try {
+    const existing = await prisma.idempotencyKey.findUnique({
+      where: { key },
+    })
+
+    return existing?.response as object | null
+  } catch (error) {
+    console.error('[Idempotency] Indisponivel, seguindo sem cache:', error)
+    return null
+  }
 }
 
 /**
  * Salva resultado de booking para idempotência
- * 
+ *
+ * FAIL-OPEN: se a tabela nao existir ou o banco falhar, apenas loga
+ * e segue (o agendamento ja foi criado com sucesso).
+ *
  * @param key - Chave de idempotência
  * @param result - Resultado a salvar
  */
@@ -92,14 +104,18 @@ export async function saveBookingIdempotency(
   key: string,
   result: object
 ): Promise<void> {
-  await prisma.idempotencyKey.upsert({
-    where: { key },
-    update: { response: result },
-    create: {
-      key,
-      response: result,
-    },
-  })
+  try {
+    await prisma.idempotencyKey.upsert({
+      where: { key },
+      update: { response: result },
+      create: {
+        key,
+        response: result,
+      },
+    })
+  } catch (error) {
+    console.error('[Idempotency] Falha ao salvar (ignorado):', error)
+  }
 }
 
 /**

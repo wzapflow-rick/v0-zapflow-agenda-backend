@@ -65,7 +65,14 @@ const rateLimiters: Record<RateLimitType, Ratelimit> = {
   webhook: webhookRateLimit,
 }
 
+// Verifica se o Redis esta configurado
+const isRedisConfigured = Boolean(
+  process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN
+)
+
 // Funcao helper para verificar rate limit
+// FAIL-OPEN: se o Redis nao estiver configurado ou falhar,
+// permite a requisicao em vez de derrubar o endpoint.
 export async function checkRateLimit(
   type: RateLimitType,
   identifier: string
@@ -75,14 +82,25 @@ export async function checkRateLimit(
   remaining: number
   reset: number
 }> {
-  const limiter = rateLimiters[type]
-  const result = await limiter.limit(identifier)
-  
-  return {
-    success: result.success,
-    limit: result.limit,
-    remaining: result.remaining,
-    reset: result.reset,
+  // Se Redis nao esta configurado, libera (fail-open)
+  if (!isRedisConfigured) {
+    return { success: true, limit: 0, remaining: 0, reset: 0 }
+  }
+
+  try {
+    const limiter = rateLimiters[type]
+    const result = await limiter.limit(identifier)
+
+    return {
+      success: result.success,
+      limit: result.limit,
+      remaining: result.remaining,
+      reset: result.reset,
+    }
+  } catch (error) {
+    // Redis caiu ou erro de rede: libera a requisicao (fail-open)
+    console.error('[RateLimit] Redis indisponivel, liberando requisicao:', error)
+    return { success: true, limit: 0, remaining: 0, reset: 0 }
   }
 }
 
