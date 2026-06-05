@@ -56,9 +56,9 @@ export async function GET(
 
     const cacheKey = getCacheKey(establishment.id, query.professionalId, query.serviceId, query.date);
 
-    // Tenta buscar do cache
+    // Tenta buscar do cache (apenas se o Redis estiver configurado)
     try {
-      const cached = await redis.get<{ slots: string[]; date: string; serviceDuration: number; timestamp: number }>(cacheKey);
+      const cached = redis ? await redis.get<{ slots: string[]; date: string; serviceDuration: number; timestamp: number }>(cacheKey) : null;
       
       if (cached) {
         const age = Date.now() - cached.timestamp;
@@ -80,7 +80,7 @@ export async function GET(
           
           // Tenta adquirir lock para revalidacao (evita cache stampede)
           const lockKey = `${cacheKey}:lock`;
-          const acquired = await redis.set(lockKey, '1', { nx: true, ex: LOCK_TTL });
+          const acquired = redis ? await redis.set(lockKey, '1', { nx: true, ex: LOCK_TTL }) : null;
           
           if (acquired) {
             // Revalida em background (nao bloqueia resposta)
@@ -108,7 +108,9 @@ export async function GET(
     
     // Salva no cache (nao bloqueia resposta)
     try {
-      await redis.set(cacheKey, { ...result, timestamp: Date.now() }, { ex: STALE_TTL });
+      if (redis) {
+        await redis.set(cacheKey, { ...result, timestamp: Date.now() }, { ex: STALE_TTL });
+      }
     } catch (cacheError) {
       console.error('[Cache] Erro ao salvar cache:', cacheError);
     }
@@ -236,6 +238,7 @@ async function revalidateSlots(
   serviceId: string,
   date: string
 ) {
+  if (!redis) return;
   try {
     const result = await fetchFreshSlots(establishmentId, professionalId, serviceId, date);
     await redis.set(cacheKey, { ...result, timestamp: Date.now() }, { ex: STALE_TTL });

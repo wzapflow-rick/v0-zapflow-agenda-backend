@@ -53,6 +53,7 @@ function getMetricKey(name: MetricName): string {
 
 // Registra uma metrica (contador ou valor)
 export async function trackMetric(name: MetricName, value?: number): Promise<void> {
+  if (!redis) return;
   try {
     const key = getMetricKey(name);
     
@@ -94,6 +95,9 @@ export async function getMetrics(
   name: MetricName,
   hoursBack: number = 24
 ): Promise<{ hourly: Record<string, MetricData>; total: MetricData }> {
+  if (!redis) {
+    return { hourly: {}, total: { count: 0, lastUpdated: Date.now() } };
+  }
   try {
     const hourly: Record<string, MetricData> = {};
     let totalCount = 0;

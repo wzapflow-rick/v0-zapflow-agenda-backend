@@ -1,71 +1,61 @@
 import { Ratelimit } from '@upstash/ratelimit'
-import { redis } from './redis'
-
-// Rate limiters para diferentes endpoints
-// Sliding window: mais preciso, distribui requests uniformemente
-
-// API Geral - 100 requests por minuto por IP
-export const generalRateLimit = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(100, '1 m'),
-  prefix: 'ratelimit:general',
-  analytics: true,
-})
-
-// Booking Publico - 10 agendamentos por minuto por IP (previne spam)
-export const bookingRateLimit = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(10, '1 m'),
-  prefix: 'ratelimit:booking',
-  analytics: true,
-})
-
-// Login/Auth - 5 tentativas por minuto por IP (previne brute force)
-export const authRateLimit = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(5, '1 m'),
-  prefix: 'ratelimit:auth',
-  analytics: true,
-})
-
-// Slots Query - 30 requests por minuto por IP (consultas pesadas)
-export const slotsRateLimit = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(30, '1 m'),
-  prefix: 'ratelimit:slots',
-  analytics: true,
-})
-
-// WhatsApp - 20 mensagens por minuto por estabelecimento
-export const whatsappRateLimit = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(20, '1 m'),
-  prefix: 'ratelimit:whatsapp',
-  analytics: true,
-})
-
-// Webhook - 100 requests por minuto (Mercado Pago pode enviar varios)
-export const webhookRateLimit = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(100, '1 m'),
-  prefix: 'ratelimit:webhook',
-  analytics: true,
-})
+import { redis, isRedisConfigured } from './redis'
 
 // Tipos de rate limit disponiveis
 export type RateLimitType = 'general' | 'booking' | 'auth' | 'slots' | 'whatsapp' | 'webhook'
 
-// Mapa de rate limiters
-const rateLimiters: Record<RateLimitType, Ratelimit> = {
-  general: generalRateLimit,
-  booking: bookingRateLimit,
-  auth: authRateLimit,
-  slots: slotsRateLimit,
-  whatsapp: whatsappRateLimit,
-  webhook: webhookRateLimit,
-}
+// Rate limiters para diferentes endpoints (so criados se o Redis estiver configurado)
+// Sliding window: mais preciso, distribui requests uniformemente
+const rateLimiters: Record<RateLimitType, Ratelimit> | null = (redis && isRedisConfigured)
+  ? {
+      // API Geral - 100 requests por minuto por IP
+      general: new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(100, '1 m'),
+        prefix: 'ratelimit:general',
+        analytics: true,
+      }),
+      // Booking Publico - 10 agendamentos por minuto por IP (previne spam)
+      booking: new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(10, '1 m'),
+        prefix: 'ratelimit:booking',
+        analytics: true,
+      }),
+      // Login/Auth - 5 tentativas por minuto por IP (previne brute force)
+      auth: new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(5, '1 m'),
+        prefix: 'ratelimit:auth',
+        analytics: true,
+      }),
+      // Slots Query - 30 requests por minuto por IP (consultas pesadas)
+      slots: new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(30, '1 m'),
+        prefix: 'ratelimit:slots',
+        analytics: true,
+      }),
+      // WhatsApp - 20 mensagens por minuto por estabelecimento
+      whatsapp: new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(20, '1 m'),
+        prefix: 'ratelimit:whatsapp',
+        analytics: true,
+      }),
+      // Webhook - 100 requests por minuto (Mercado Pago pode enviar varios)
+      webhook: new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(100, '1 m'),
+        prefix: 'ratelimit:webhook',
+        analytics: true,
+      }),
+    }
+  : null
 
 // Funcao helper para verificar rate limit
+// Se o Redis nao estiver configurado, faz "fail-open" (permite a requisicao)
+// para que a aplicacao continue funcionando sem Upstash.
 export async function checkRateLimit(
   type: RateLimitType,
   identifier: string
@@ -75,14 +65,24 @@ export async function checkRateLimit(
   remaining: number
   reset: number
 }> {
-  const limiter = rateLimiters[type]
-  const result = await limiter.limit(identifier)
-  
-  return {
-    success: result.success,
-    limit: result.limit,
-    remaining: result.remaining,
-    reset: result.reset,
+  if (!rateLimiters) {
+    return { success: true, limit: 0, remaining: 0, reset: 0 }
+  }
+
+  try {
+    const limiter = rateLimiters[type]
+    const result = await limiter.limit(identifier)
+
+    return {
+      success: result.success,
+      limit: result.limit,
+      remaining: result.remaining,
+      reset: result.reset,
+    }
+  } catch (error) {
+    // Em caso de falha do Redis, nao bloqueia o usuario (fail-open)
+    console.error('[RateLimit] Erro ao verificar rate limit:', error)
+    return { success: true, limit: 0, remaining: 0, reset: 0 }
   }
 }
 
