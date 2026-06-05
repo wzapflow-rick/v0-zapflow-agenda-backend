@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import { authenticate, isAuthError } from '@/lib/auth';
 import { success, handleError, NotFoundError } from '@/lib/api-utils';
 import { createClientSchema } from '@/lib/validators';
+import { notifyClientCreated } from '@/lib/notifications';
 
 // GET /api/clients - Listar clientes
 export async function GET(request: NextRequest) {
@@ -96,6 +97,15 @@ export async function POST(request: NextRequest) {
         notes: data.notes,
         establishmentId: authResult.establishmentId,
       },
+    });
+
+    // Cria notificacao de novo cliente (nao bloqueia a resposta)
+    notifyClientCreated({
+      establishmentId: authResult.establishmentId,
+      clientId: client.id,
+      clientName: client.name,
+    }).catch((error) => {
+      console.error('[Notifications] Erro ao criar notificacao de cliente:', error);
     });
 
     return success(client, 201);

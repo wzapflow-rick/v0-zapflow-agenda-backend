@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { success, handleError } from '@/lib/api-utils';
+import { notifyWhatsAppDisconnected } from '@/lib/notifications';
 
 // POST /api/webhooks/evolution - Webhook da Evolution API
 export async function POST(request: NextRequest) {
@@ -48,13 +49,24 @@ export async function POST(request: NextRequest) {
           console.log('[Evolution Webhook] WhatsApp conectado:', phoneNumber);
         } else if (state === 'close' || state === 'disconnected') {
           // WhatsApp desconectado
+          const wasConnected = settings.whatsappConnected;
+
           await prisma.automaticMessageSettings.update({
             where: { id: settings.id },
             data: {
               whatsappConnected: false,
             },
           });
-          
+
+          // Cria notificacao apenas se estava conectado antes (evita spam)
+          if (wasConnected) {
+            notifyWhatsAppDisconnected({
+              establishmentId: settings.establishmentId,
+            }).catch((error) => {
+              console.error('[Notifications] Erro ao criar notificacao de WhatsApp desconectado:', error);
+            });
+          }
+
           console.log('[Evolution Webhook] WhatsApp desconectado');
         }
         break;

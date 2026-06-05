@@ -4,6 +4,7 @@ import { authenticate, isAuthError } from '@/lib/auth';
 import { success, handleError, NotFoundError, ApiError } from '@/lib/api-utils';
 import { createAppointmentSchema } from '@/lib/validators';
 import { createAppointmentSafe } from '@/lib/booking-lock';
+import { notifyAppointmentCreated } from '@/lib/notifications';
 
 // GET /api/appointments - Listar agendamentos
 export async function GET(request: NextRequest) {
@@ -128,6 +129,19 @@ export async function POST(request: NextRequest) {
     if (!result.success) {
       throw new ApiError(result.error, 409);
     }
+
+    // Cria notificacao de novo agendamento (nao bloqueia a resposta)
+    const dateFormatted = new Date(`${data.date}T00:00:00`).toLocaleDateString('pt-BR');
+    notifyAppointmentCreated({
+      establishmentId: authResult.establishmentId,
+      appointmentId: (result.appointment as { id: string }).id,
+      clientName: client.name,
+      serviceName: service.name,
+      date: dateFormatted,
+      time: data.startTime,
+    }).catch((error) => {
+      console.error('[Notifications] Erro ao criar notificacao de agendamento:', error);
+    });
 
     return success(result.appointment, 201);
   } catch (error) {

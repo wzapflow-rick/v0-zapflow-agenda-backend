@@ -5,6 +5,7 @@ import { success, handleError } from '@/lib/api-utils';
 import { NotFoundError, ForbiddenError } from '@/lib/api-utils';
 import { z } from 'zod';
 import { sendAutomaticMessage, MessageType } from '@/lib/whatsapp';
+import { notifyAppointmentCancelled, notifyAppointmentNoShow } from '@/lib/notifications';
 
 const updateStatusSchema = z.object({
   status: z.enum(['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED', 'NO_SHOW']),
@@ -59,6 +60,34 @@ export async function PUT(
         service: true,
       },
     });
+
+    // Cria notificacao interna baseada no novo status (nao bloqueia a resposta)
+    const dateFormatted = new Date(appointment.date).toLocaleDateString('pt-BR');
+    const timeFormatted = appointment.startTime instanceof Date
+      ? appointment.startTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      : String(appointment.startTime);
+
+    if (status === 'CANCELLED') {
+      notifyAppointmentCancelled({
+        establishmentId: appointment.establishmentId,
+        appointmentId: appointment.id,
+        clientName: appointment.client.name,
+        date: dateFormatted,
+        time: timeFormatted,
+      }).catch((error) => {
+        console.error('[Notifications] Erro ao criar notificacao de cancelamento:', error);
+      });
+    } else if (status === 'NO_SHOW') {
+      notifyAppointmentNoShow({
+        establishmentId: appointment.establishmentId,
+        appointmentId: appointment.id,
+        clientName: appointment.client.name,
+        date: dateFormatted,
+        time: timeFormatted,
+      }).catch((error) => {
+        console.error('[Notifications] Erro ao criar notificacao de no-show:', error);
+      });
+    }
 
     // Envia mensagem automatica baseada no novo status (nao bloqueia a resposta)
     const messageType = STATUS_TO_MESSAGE_TYPE[status];

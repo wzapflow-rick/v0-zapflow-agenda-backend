@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { success, handleError } from '@/lib/api-utils';
 import { sendAutomaticMessage } from '@/lib/whatsapp';
+import { notifyAppointmentReminder, reminderNotificationExists } from '@/lib/notifications';
 
 // Verifica o header de autorização do cron (Vercel Cron ou chave personalizada)
 function verifyCronAuth(request: NextRequest): boolean {
@@ -105,6 +106,23 @@ export async function GET(request: NextRequest) {
           results.reminder24h.sent++;
         } else {
           results.reminder24h.errors++;
+        }
+
+        // Cria notificacao interna de lembrete (com dedup por agendamento)
+        const alreadyNotified = await reminderNotificationExists({
+          establishmentId: appointment.establishment.id,
+          appointmentId: appointment.id,
+        });
+
+        if (!alreadyNotified) {
+          await notifyAppointmentReminder({
+            establishmentId: appointment.establishment.id,
+            appointmentId: appointment.id,
+            clientName: appointment.client.name,
+            serviceName: appointment.service.name,
+            date: new Date(appointment.date).toLocaleDateString('pt-BR'),
+            time: startTimeStr,
+          });
         }
       } catch (error) {
         console.error('[Cron] Erro ao enviar lembrete 24h:', error);

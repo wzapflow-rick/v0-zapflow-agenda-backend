@@ -4,6 +4,7 @@ export type NotificationType =
   | 'appointment_created'
   | 'appointment_cancelled'
   | 'appointment_reminder'
+  | 'appointment_no_show'
   | 'client_created'
   | 'whatsapp_disconnected';
 
@@ -96,4 +97,63 @@ export async function notifyWhatsAppDisconnected(params: {
     title: 'WhatsApp Desconectado',
     message: 'Sua conexão com o WhatsApp foi perdida. Reconecte nas configurações.',
   });
+}
+
+// Notificacao de cliente que nao compareceu (no-show)
+export async function notifyAppointmentNoShow(params: {
+  establishmentId: string;
+  appointmentId: string;
+  clientName: string;
+  date: string;
+  time: string;
+}) {
+  return createNotification({
+    establishmentId: params.establishmentId,
+    type: 'appointment_no_show',
+    title: 'Cliente Não Compareceu',
+    message: `${params.clientName} não compareceu ao agendamento de ${params.date} às ${params.time}`,
+    data: { appointmentId: params.appointmentId },
+  });
+}
+
+// Notificacao de lembrete de agendamento (disparada via cron)
+export async function notifyAppointmentReminder(params: {
+  establishmentId: string;
+  appointmentId: string;
+  clientName: string;
+  serviceName: string;
+  date: string;
+  time: string;
+}) {
+  return createNotification({
+    establishmentId: params.establishmentId,
+    type: 'appointment_reminder',
+    title: 'Lembrete de Agendamento',
+    message: `${params.clientName} tem ${params.serviceName} agendado para ${params.date} às ${params.time}`,
+    data: { appointmentId: params.appointmentId },
+  });
+}
+
+// Verifica se ja existe uma notificacao de lembrete para um agendamento (evita duplicar)
+export async function reminderNotificationExists(params: {
+  establishmentId: string;
+  appointmentId: string;
+}): Promise<boolean> {
+  try {
+    const existing = await prisma.notification.findFirst({
+      where: {
+        establishmentId: params.establishmentId,
+        type: 'appointment_reminder',
+        data: {
+          path: ['appointmentId'],
+          equals: params.appointmentId,
+        },
+      },
+      select: { id: true },
+    });
+    return existing !== null;
+  } catch (error) {
+    console.error('[Notifications] Erro ao verificar lembrete existente:', error);
+    return false;
+  }
 }
