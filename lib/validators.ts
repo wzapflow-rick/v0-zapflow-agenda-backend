@@ -149,6 +149,39 @@ export const createSubscriptionSchema = z.object({
   planId: z.string().uuid('ID do plano inválido'),
 });
 
+// Confirmation Settings (fluxo de confirmacao via WhatsApp)
+const confirmationTemplatesSchema = z.object({
+  reservation_created: z.string().default(''),
+  confirmation_request: z.string().default(''),
+  confirmation_reminder: z.string().default(''),
+  confirmation_cancelled: z.string().default(''),
+  final_reminder: z.string().default(''),
+});
+
+export const updateConfirmationSettingsSchema = z.object({
+  enabled: z.boolean().optional(),
+  leadTimeHours: z.number().int().min(1, 'Lead time mínimo é 1 hora').max(168, 'Lead time máximo é 168 horas').optional(),
+  templates: confirmationTemplatesSchema.partial().optional(),
+});
+
+// Confirmation Service Report (relatorio do cron)
+export const confirmationReportSchema = z.object({
+  results: z.array(
+    z.object({
+      appointmentId: z.string().uuid('ID do agendamento inválido'),
+      action: z.enum([
+        'send_reservation',
+        'send_confirmation_request',
+        'send_confirmation_reminder',
+        'cancel_no_confirmation',
+        'send_final_reminder',
+      ]),
+      success: z.boolean(),
+      error: z.string().optional(),
+    })
+  ),
+});
+
 // Types
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;

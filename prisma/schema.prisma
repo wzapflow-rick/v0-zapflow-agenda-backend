@@ -75,6 +75,7 @@ model Establishment {
   clients         Client[]
   appointments    Appointment[]
   automaticMessageSettings AutomaticMessageSettings?
+  confirmationSettings     ConfirmationSettings?
   notifications   Notification[]
 
   @@map("establishments")
@@ -179,6 +180,17 @@ model Appointment {
   // Preço no momento do agendamento (pode diferir do preço atual do serviço)
   price           Decimal           @db.Decimal(10, 2)
   
+  // Fluxo de confirmacao via WhatsApp (envio feito pelo frontend)
+  // Valores: pending | confirmed | declined | cancelled | expired
+  confirmationStatus        String    @default("pending")
+  confirmationToken         String?   @unique
+  confirmationLinkSentAt    DateTime?
+  confirmationReminderSentAt DateTime?
+  reservationMessageSentAt  DateTime?
+  finalReminderSentAt       DateTime?
+  confirmedAt               DateTime?
+  cancelledAt               DateTime?
+  
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
@@ -201,6 +213,7 @@ model Appointment {
   @@index([professionalId, date])
   @@index([clientId])
   @@index([status])
+  @@index([confirmationStatus])
   @@index([professionalId, date, status, startTime, endTime], name: "idx_appointments_slots_query")
   @@index([createdAt(sort: Desc)])
   @@map("appointments")
@@ -453,6 +466,25 @@ model IdempotencyKey {
 
   @@index([createdAt])
   @@map("idempotency_keys")
+}
+
+// Modelo de Configuracao do Fluxo de Confirmacao via WhatsApp
+model ConfirmationSettings {
+  id              String   @id @default(uuid())
+  enabled         Boolean  @default(false)
+  leadTimeHours   Int      @default(24) @map("lead_time_hours")
+  
+  // Guarda apenas os IDs dos modelos escolhidos (strings)
+  // { reservation_created, confirmation_request, confirmation_reminder, confirmation_cancelled, final_reminder }
+  templates       Json?
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  establishmentId String        @unique
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
+  @@map("confirmation_settings")
 }
 
 // Modelo para eventos de webhook

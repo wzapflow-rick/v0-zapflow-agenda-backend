@@ -9,7 +9,13 @@
  */
 
 import { PrismaClient, Prisma } from '@prisma/client'
+import { randomBytes } from 'crypto'
 import { invalidateSlotsCache } from './redis'
+
+// Gera um token unico e aleatorio para o link publico de confirmacao
+export function generateConfirmationToken(): string {
+  return randomBytes(24).toString('hex')
+}
 
 // Gera hash numérico para usar como chave do advisory lock
 function hashToNumber(str: string): bigint {
@@ -171,6 +177,8 @@ export async function createAppointmentSafe(
             professionalId: data.professionalId,
             serviceId: data.serviceId,
             clientId: data.clientId,
+            // Token unico para o link publico de confirmacao
+            confirmationToken: generateConfirmationToken(),
           },
           include: {
             client: true,
