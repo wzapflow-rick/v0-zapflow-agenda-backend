@@ -73,6 +73,19 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const data = createProfessionalSchema.parse(body);
 
+    // Valida que os servicos informados pertencem ao estabelecimento
+    let validServiceIds: string[] = [];
+    if (data.serviceIds && data.serviceIds.length > 0) {
+      const owned = await prisma.service.findMany({
+        where: {
+          id: { in: data.serviceIds },
+          establishmentId: authResult.establishmentId,
+        },
+        select: { id: true },
+      });
+      validServiceIds = owned.map((s) => s.id);
+    }
+
     const professional = await prisma.professional.create({
       data: {
         name: data.name,
@@ -82,6 +95,12 @@ export async function POST(request: NextRequest) {
         bio: data.bio,
         workingHours: data.workingHours,
         establishmentId: authResult.establishmentId,
+        services: {
+          create: validServiceIds.map((serviceId) => ({ serviceId })),
+        },
+      },
+      include: {
+        services: { include: { service: true } },
       },
     });
 

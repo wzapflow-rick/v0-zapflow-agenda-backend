@@ -70,15 +70,55 @@ export async function PUT(
       throw new ForbiddenError();
     }
 
-    const updated = await prisma.service.update({
-      where: { id },
-      data: {
-        name: data.name,
-        description: data.description,
-        duration: data.duration,
-        price: data.price,
-        active: data.isActive,
-      },
+    // Se professionalIds foi enviado, valida posse e sincroniza o vinculo
+    let validProfessionalIds: string[] | null = null;
+    if (data.professionalIds !== undefined) {
+      if (data.professionalIds.length > 0) {
+        const owned = await prisma.professional.findMany({
+          where: {
+            id: { in: data.professionalIds },
+            establishmentId: authResult.establishmentId,
+          },
+          select: { id: true },
+        });
+        validProfessionalIds = owned.map((p) => p.id);
+      } else {
+        validProfessionalIds = [];
+      }
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const svc = await tx.service.update({
+        where: { id },
+        data: {
+          name: data.name,
+          description: data.description,
+          duration: data.duration,
+          price: data.price,
+          active: data.isActive,
+        },
+      });
+
+      // Substitui o conjunto de profissionais (remove os antigos, cria os novos)
+      if (validProfessionalIds !== null) {
+        await tx.professionalService.deleteMany({ where: { serviceId: id } });
+        if (validProfessionalIds.length > 0) {
+          await tx.professionalService.createMany({
+            data: validProfessionalIds.map((professionalId) => ({
+              professionalId,
+              serviceId: id,
+            })),
+            skipDuplicates: true,
+          });
+        }
+      }
+
+      return tx.service.findUnique({
+        where: { id },
+        include: {
+          professionals: { include: { professional: true } },
+        },
+      });
     });
 
     return success(updated);

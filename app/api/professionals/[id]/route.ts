@@ -70,24 +70,57 @@ export async function PUT(
       throw new ForbiddenError();
     }
 
-    const updated = await prisma.professional.update({
-      where: { id },
-      data: {
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        avatar: data.avatarUrl ?? data.avatar,
-        bio: data.bio,
-        workingHours: data.workingHours,
-        active: data.isActive,
-      },
-      include: {
-        services: {
-          include: {
-            service: true,
+    // Se serviceIds foi enviado, valida posse e sincroniza o vinculo
+    let validServiceIds: string[] | null = null;
+    if (data.serviceIds !== undefined) {
+      if (data.serviceIds.length > 0) {
+        const owned = await prisma.service.findMany({
+          where: {
+            id: { in: data.serviceIds },
+            establishmentId: authResult.establishmentId,
           },
+          select: { id: true },
+        });
+        validServiceIds = owned.map((s) => s.id);
+      } else {
+        validServiceIds = [];
+      }
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      await tx.professional.update({
+        where: { id },
+        data: {
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          avatar: data.avatarUrl ?? data.avatar,
+          bio: data.bio,
+          workingHours: data.workingHours,
+          active: data.isActive,
         },
-      },
+      });
+
+      // Substitui o conjunto de servicos (remove os antigos, cria os novos)
+      if (validServiceIds !== null) {
+        await tx.professionalService.deleteMany({ where: { professionalId: id } });
+        if (validServiceIds.length > 0) {
+          await tx.professionalService.createMany({
+            data: validServiceIds.map((serviceId) => ({
+              professionalId: id,
+              serviceId,
+            })),
+            skipDuplicates: true,
+          });
+        }
+      }
+
+      return tx.professional.findUnique({
+        where: { id },
+        include: {
+          services: { include: { service: true } },
+        },
+      });
     });
 
     return success(updated);

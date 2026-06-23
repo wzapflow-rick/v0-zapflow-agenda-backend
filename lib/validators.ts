@@ -92,11 +92,11 @@ export const createProfessionalSchema = z.object({
   bio: z.string().optional(),
   specialties: z.array(z.string()).optional(),
   workingHours: workingHoursSchema,
+  serviceIds: z.array(z.string().uuid()).optional(),
 });
 
 export const updateProfessionalSchema = createProfessionalSchema.partial().extend({
   isActive: z.boolean().optional(),
-  serviceIds: z.array(z.string().uuid()).optional(),
 });
 
 // Service
@@ -107,6 +107,7 @@ export const createServiceSchema = z.object({
   price: z.number().min(0, 'Preço não pode ser negativo'),
   category: z.string().optional(),
   imageUrl: z.string().url().optional(),
+  professionalIds: z.array(z.string().uuid()).optional(),
 });
 
 export const updateServiceSchema = createServiceSchema.partial().extend({
