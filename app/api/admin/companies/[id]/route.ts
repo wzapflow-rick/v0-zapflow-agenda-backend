@@ -236,3 +236,67 @@ export async function PATCH(
     return NextResponse.json({ error: 'Erro ao atualizar empresa' }, { status: 500 })
   }
 }
+
+// DELETE /api/admin/companies/[id] - Exclui a empresa e todos os dados (id = establishmentId)
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const admin = await getAdminFromCookies()
+    if (!admin) {
+      return NextResponse.json({ error: 'Nao autorizado' }, { status: 401 })
+    }
+
+    const { id } = await params
+
+    // Busca o estabelecimento e o usuario dono
+    const establishment = await prisma.establishment.findUnique({
+      where: { id },
+      include: { user: { select: { id: true, email: true } } },
+    })
+
+    if (!establishment) {
+      return NextResponse.json({ error: 'Empresa nao encontrada' }, { status: 404 })
+    }
+
+    // Confirmacao por nome para evitar exclusao acidental
+    const body = await request.json().catch(() => ({}))
+    if (body?.confirmName !== establishment.name) {
+      return NextResponse.json(
+        { error: 'Confirmacao invalida. Digite o nome exato da empresa.' },
+        { status: 400 }
+      )
+    }
+
+    const userId = establishment.user.id
+    const ownerEmail = establishment.user.email
+    const establishmentName = establishment.name
+
+    // Exclui o usuario dono. O onDelete: Cascade remove o estabelecimento e
+    // todos os dados relacionados (agendamentos, clientes, servicos,
+    // profissionais, assinatura, notificacoes, etc).
+    await prisma.user.delete({ where: { id: userId } })
+
+    // Registra auditoria (AuditLog nao tem FK, entao sobrevive a exclusao)
+    await prisma.auditLog.create({
+      data: {
+        action: 'DELETE_COMPANY',
+        severity: 'HIGH',
+        userId,
+        establishmentId: id,
+        resourceType: 'establishment',
+        resourceId: id,
+        details: `[Admin: ${admin.email}] Empresa excluida permanentemente: ${establishmentName} (${ownerEmail})`,
+      },
+    }).catch((err) => console.error('[Audit] Erro ao registrar:', err))
+
+    return NextResponse.json({
+      success: true,
+      message: `Empresa "${establishmentName}" excluida com sucesso`,
+    })
+  } catch (error) {
+    console.error('[Admin Company DELETE] Erro:', error)
+    return NextResponse.json({ error: 'Erro ao excluir empresa' }, { status: 500 })
+  }
+}

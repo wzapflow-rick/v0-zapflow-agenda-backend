@@ -19,6 +19,8 @@ import {
   ChevronRight,
   Mail,
   Phone,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react"
 
 interface Plan {
@@ -351,6 +353,11 @@ function ManageModal({
   const [newStatus, setNewStatus] = useState(company.subscription?.status || "ACTIVE")
   const [extendDays, setExtendDays] = useState("30")
 
+  // Estado da exclusao
+  const [showDelete, setShowDelete] = useState(false)
+  const [confirmName, setConfirmName] = useState("")
+  const [deleting, setDeleting] = useState(false)
+
   const callApi = async (action: string, payload: Record<string, unknown>) => {
     setSaving(true)
     setMessage(null)
@@ -371,6 +378,29 @@ function ManageModal({
       setMessage({ type: "error", text: "Erro de conexao" })
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    setDeleting(true)
+    setMessage(null)
+    try {
+      const res = await fetch(`/api/admin/companies/${company.establishmentId}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmName }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setMessage({ type: "error", text: data.error || "Erro ao excluir" })
+      } else {
+        setMessage({ type: "success", text: data.message || "Empresa excluida!" })
+        setTimeout(() => onSuccess(), 1000)
+      }
+    } catch {
+      setMessage({ type: "error", text: "Erro de conexao" })
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -542,6 +572,63 @@ function ManageModal({
                 Aplicar
               </button>
             </div>
+          </div>
+
+          {/* Zona de perigo - excluir empresa */}
+          <div className="bg-red-500/5 border border-red-500/30 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle className="w-4 h-4 text-red-400" />
+              <h3 className="text-sm font-semibold text-red-400">Zona de Perigo</h3>
+            </div>
+
+            {!showDelete ? (
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs text-slate-400">
+                  Exclui a empresa, o dono e todos os dados (agendamentos, clientes, servicos). Acao irreversivel.
+                </p>
+                <button
+                  onClick={() => setShowDelete(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Excluir
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-xs text-slate-300">
+                  Para confirmar, digite o nome exato da empresa:{" "}
+                  <span className="font-semibold text-white">{company.establishmentName}</span>
+                </p>
+                <input
+                  type="text"
+                  value={confirmName}
+                  onChange={(e) => setConfirmName(e.target.value)}
+                  placeholder="Nome da empresa"
+                  className="w-full px-3 py-2 bg-slate-700 border border-red-500/40 rounded-lg text-white text-sm focus:outline-none focus:border-red-500"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setShowDelete(false)
+                      setConfirmName("")
+                    }}
+                    disabled={deleting}
+                    className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleting || confirmName !== company.establishmentName}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    {deleting ? "Excluindo..." : "Excluir definitivamente"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
