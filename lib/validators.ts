@@ -1,4 +1,8 @@
 import { z } from 'zod';
+import { BusinessType } from '@prisma/client';
+
+// Enum de nicho de negócio (validado no backend, nunca confiar no frontend)
+export const businessTypeEnum = z.nativeEnum(BusinessType);
 
 // Validacao de senha forte (OWASP)
 const passwordSchema = z
@@ -19,6 +23,7 @@ export const registerSchema = z.object({
   password: passwordSchema,
   establishmentName: z.string().min(2, 'Nome do estabelecimento deve ter pelo menos 2 caracteres').max(100),
   phone: z.string().optional(),
+  businessType: businessTypeEnum.optional(),
 });
 
 export const loginSchema = z.object({
@@ -73,6 +78,8 @@ export const updateEstablishmentSchema = z.object({
   slotDuration: z.number().int().min(5).max(120).optional(),
   workingHours: workingHoursSchema,
   businessHours: workingHoursSchema,
+  businessType: businessTypeEnum.optional(),
+  metadata: z.record(z.any()).optional().nullable(),
 });
 
 // Professional

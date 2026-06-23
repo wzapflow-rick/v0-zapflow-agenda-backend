@@ -45,6 +45,15 @@ model PasswordReset {
   @@map("password_resets")
 }
 
+// Tipo de negócio / nicho do estabelecimento
+enum BusinessType {
+  BARBERSHOP
+  PERSONAL_TRAINER
+  BEAUTY_SALON
+  CLINIC
+  OTHER
+}
+
 // Modelo de Estabelecimento
 model Establishment {
   id              String    @id @default(uuid())
@@ -62,6 +71,12 @@ model Establishment {
   // Configurações adicionais
   timezone        String    @default("America/Sao_Paulo")
   slotDuration    Int       @default(30) // Duração padrão do slot em minutos
+  
+  // Nicho do negócio - define terminologia, serviços padrão e módulos habilitados
+  businessType    BusinessType @default(OTHER)
+  // Configurações específicas por nicho sem criar colunas novas
+  // ex.: { "chairCount": 4 }, { "crmRequired": true }, { "workoutTypes": [] }
+  metadata        Json?
   
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt

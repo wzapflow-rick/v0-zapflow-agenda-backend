@@ -99,6 +99,9 @@ export async function PUT(request: NextRequest) {
         timezone: data.timezone,
         slotDuration: data.slotDuration,
         businessHours: normalizedHours,
+        businessType: data.businessType,
+        // metadata: undefined preserva o valor atual; null limpa explicitamente
+        ...(data.metadata !== undefined ? { metadata: data.metadata ?? undefined } : {}),
       },
     });
 

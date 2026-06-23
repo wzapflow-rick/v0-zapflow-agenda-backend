@@ -7,6 +7,7 @@ import { registerSchema } from '@/lib/validators';
 import { withRateLimit, RATE_LIMITS, rateLimitExceeded } from '@/lib/rate-limit';
 import { auditLog, getRequestInfo } from '@/lib/audit-log';
 import { sanitizeEmail, sanitizeString, sanitizePhone, sanitizeSlug } from '@/lib/sanitize';
+import { seedDefaultServices } from '@/lib/business-seed';
 
 // POST /api/auth/register
 export async function POST(request: NextRequest) {
@@ -72,6 +73,7 @@ export async function POST(request: NextRequest) {
             name: establishmentName,
             slug,
             businessHours: defaultBusinessHours,
+            businessType: data.businessType ?? 'OTHER',
           },
         },
       },
@@ -79,6 +81,11 @@ export async function POST(request: NextRequest) {
         establishment: true,
       },
     });
+
+    // Seed de serviços padrão do nicho (não roda para OTHER, não duplica, não quebra o registro)
+    if (user.establishment) {
+      await seedDefaultServices(prisma, user.establishment.id, user.establishment.businessType);
+    }
 
     // Log de registro
     await auditLog({
