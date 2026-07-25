@@ -321,6 +321,14 @@ export default function AdminDashboardPage() {
                 <span className="hidden sm:inline">Trials</span>
               </button>
               <button
+                onClick={() => router.push("/admin/whatsapp")}
+                className="flex items-center gap-2 px-4 py-2 text-sm bg-slate-600/20 text-slate-300 hover:bg-slate-600/30 rounded-lg transition-colors"
+                title="Mensagens Gerais (WhatsApp)"
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span className="hidden sm:inline">WhatsApp</span>
+              </button>
+              <button
                 onClick={handleRefresh}
                 className="p-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
                 title="Atualizar"

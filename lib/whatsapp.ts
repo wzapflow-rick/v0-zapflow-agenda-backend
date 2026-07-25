@@ -105,6 +105,153 @@ export const evolutionApi = {
       return { success: false };
     }
   },
+
+  // Conecta a instância e retorna o QR Code para leitura
+  async connectInstance(
+    instanceName: string
+  ): Promise<{ success: boolean; qrCode?: string; pairingCode?: string; error?: string }> {
+    if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
+      return { success: false, error: 'Evolution API não configurada' };
+    }
+
+    try {
+      const response = await fetch(`${EVOLUTION_API_URL}/instance/connect/${instanceName}`, {
+        method: 'GET',
+        headers: {
+          'apikey': EVOLUTION_API_KEY,
+        },
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: data?.message || data?.error || `Evolution API retornou ${response.status}`,
+        };
+      }
+
+      return {
+        success: true,
+        qrCode: data.base64 || data.qrcode?.base64 || data.qr?.base64,
+        pairingCode: data.pairingCode || data.qrcode?.pairingCode,
+      };
+    } catch (error) {
+      console.error('[Evolution API] Erro ao conectar instância:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Erro desconhecido',
+      };
+    }
+  },
+
+  // Desconecta (logout) a instância sem deletá-la
+  async logoutInstance(instanceName: string): Promise<{ success: boolean; error?: string }> {
+    if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
+      return { success: false, error: 'Evolution API não configurada' };
+    }
+
+    try {
+      const response = await fetch(`${EVOLUTION_API_URL}/instance/logout/${instanceName}`, {
+        method: 'DELETE',
+        headers: {
+          'apikey': EVOLUTION_API_KEY,
+        },
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        return { success: false, error: data?.message || `Evolution API retornou ${response.status}` };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('[Evolution API] Erro ao desconectar instância:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Erro desconhecido' };
+    }
+  },
+
+  // Reinicia a instância (útil quando ela travou em "connecting")
+  async restartInstance(instanceName: string): Promise<{ success: boolean; error?: string }> {
+    if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
+      return { success: false, error: 'Evolution API não configurada' };
+    }
+
+    try {
+      const response = await fetch(`${EVOLUTION_API_URL}/instance/restart/${instanceName}`, {
+        method: 'POST',
+        headers: {
+          'apikey': EVOLUTION_API_KEY,
+        },
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        return { success: false, error: data?.message || `Evolution API retornou ${response.status}` };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('[Evolution API] Erro ao reiniciar instância:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Erro desconhecido' };
+    }
+  },
+
+  // Lista todas as instâncias existentes na Evolution API
+  async fetchInstances(): Promise<{
+    success: boolean;
+    instances: { name: string; state: string; number?: string | null }[];
+    error?: string;
+  }> {
+    if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
+      return { success: false, instances: [], error: 'Evolution API não configurada' };
+    }
+
+    try {
+      const response = await fetch(`${EVOLUTION_API_URL}/instance/fetchInstances`, {
+        method: 'GET',
+        headers: {
+          'apikey': EVOLUTION_API_KEY,
+        },
+      });
+
+      if (!response.ok) {
+        return { success: false, instances: [], error: `Evolution API retornou ${response.status}` };
+      }
+
+      const data = await response.json();
+      const rawList = Array.isArray(data) ? data : data?.instances || [];
+
+      // A Evolution API mudou o formato de resposta entre versões, por isso
+      // normalizamos os dois formatos conhecidos aqui.
+      const instances = rawList.map((item: Record<string, any>) => {
+        const instance = item.instance || item;
+        return {
+          name: instance.instanceName || instance.name || '',
+          state: instance.connectionStatus || instance.state || instance.status || 'unknown',
+          number: instance.owner || instance.number || instance.ownerJid || null,
+        };
+      }).filter((i: { name: string }) => i.name);
+
+      return { success: true, instances };
+    } catch (error) {
+      console.error('[Evolution API] Erro ao listar instâncias:', error);
+      return {
+        success: false,
+        instances: [],
+        error: error instanceof Error ? error.message : 'Erro desconhecido',
+      };
+    }
+  },
+
+  // Envia uma mensagem de texto por uma instância arbitrária
+  async sendText(
+    instanceName: string,
+    phone: string,
+    text: string
+  ): Promise<{ success: boolean; error?: string }> {
+    return sendToEvolutionAPI(instanceName, phone, text);
+  },
 };
 
 // Tipos de mensagens disponíveis

@@ -2,41 +2,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withRateLimit, RATE_LIMITS, rateLimitExceeded } from '@/lib/rate-limit';
 import { auditLog, getRequestInfo } from '@/lib/audit-log';
 import { sanitizePhone } from '@/lib/sanitize';
-
-const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL;
-const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY;
+import { sendSystemWhatsAppMessage } from '@/lib/system-whatsapp';
 
 // Armazena codigos temporarios em memoria (em producao, usar Redis)
 // Formato: { "5511999999999": { code: "123456", expiresAt: Date, attempts: number } }
 const resetCodes = new Map<string, { code: string; expiresAt: Date; attempts: number }>();
 
-// Envia mensagem via WhatsApp
+// Envia mensagem pela instancia de mensagens gerais configurada no painel admin.
+// O nome da instancia NAO fica mais fixo no codigo: ele vem de AppSettings,
+// portanto o admin pode corrigi-lo sem novo deploy.
 async function sendWhatsAppMessage(phone: string, message: string): Promise<boolean> {
-  if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
-    console.error('[WhatsApp] Evolution API nao configurada');
-    return false;
+  const result = await sendSystemWhatsAppMessage(phone, message);
+
+  if (!result.success) {
+    console.error(
+      `[WhatsApp] Falha ao enviar codigo de recuperacao pela instancia "${result.instanceName}":`,
+      result.error
+    );
   }
 
-  try {
-    const instanceName = 'SimpleCRM';
-    
-    const response = await fetch(`${EVOLUTION_API_URL}/message/sendText/${instanceName}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': EVOLUTION_API_KEY,
-      },
-      body: JSON.stringify({
-        number: phone,
-        text: message,
-      }),
-    });
-
-    return response.ok;
-  } catch (error) {
-    console.error('[WhatsApp] Erro ao enviar mensagem:', error);
-    return false;
-  }
+  return result.success;
 }
 
 // Exporta para usar nas outras rotas
