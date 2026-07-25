@@ -75,7 +75,8 @@ export async function POST(
       throw new NotFoundError('Estabelecimento não encontrado');
     }
 
-    const instanceName = `zapflow_${establishment.slug}`;
+    // Nome canonico baseado no ID unico (igual ao front-end e as demais rotas)
+    const instanceName = `ZapFlow-Agenda_${id}`;
 
     // Cria instância na Evolution API
     const result = await evolutionApi.createInstance(instanceName);

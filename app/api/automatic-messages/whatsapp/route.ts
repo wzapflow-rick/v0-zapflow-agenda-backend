@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
       where: { establishmentId: authResult.establishmentId },
     });
 
-    const instanceName = settings?.whatsappInstanceName || `ZapFlow-Agenda_${establishment.slug}`;
+    const instanceName = settings?.whatsappInstanceName || `ZapFlow-Agenda_${authResult.establishmentId}`;
 
     // Se não tiver Evolution API configurada, retorna erro
     if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
@@ -159,8 +159,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { connected, phone, instanceName } = body;
 
-    // Gera instanceName se nao foi fornecido
-    const finalInstanceName = instanceName || `ZapFlow-Agenda_${establishment.slug}`;
+    // O nome canonico da instancia e baseado no ID UNICO do estabelecimento
+    // (ZapFlow-Agenda_<id>), exatamente como o front-end nomeia a instancia ao
+    // conectar na Evolution. Priorizamos o instanceName enviado pelo front; o
+    // fallback usa o ID (nao o slug) para garantir que envios de mensagens
+    // ocorram pela MESMA instancia que foi de fato conectada.
+    const finalInstanceName =
+      instanceName || `ZapFlow-Agenda_${authResult.establishmentId}`;
 
     // Atualiza o status de conexão E o instanceName
     const settings = await prisma.automaticMessageSettings.upsert({
